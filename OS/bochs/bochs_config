@@ -1,0 +1,6 @@
+megs: 128
+romimage: file=/home/avery/OSDEV/OSDEV/x86/bochs/BIOS-bochs-latest
+vgaromimage: file=/home/avery/OSDEV/OSDEV/x86/bochs/VGABIOS-lgpl-latest
+ata0-master: type=cdrom, path="../kernel/myos.iso", status=inserted
+boot:cdrom
+display_library: x, options="gui_debug"
