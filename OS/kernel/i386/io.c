@@ -1,7 +1,7 @@
 #include <stddef.h>
+#include <kernel/io.h>
 
-// This info was found at http://www.osdever.net/tutorials/view/brans-kernel-development-tutorial
-
+// This code was found at http://www.osdever.net/tutorials/view/brans-kernel-development-tutorial
 unsigned char inb(unsigned short _port) {
     unsigned char rv;
     __asm__ __volatile__("inb %1, %0" : "=a" (rv) : "dN" (_port));
