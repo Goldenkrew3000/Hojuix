@@ -14,11 +14,11 @@ void enable_cursor() {
     outb(0x3D5, (inb(0x3D5) & 0xE0) | 15);
 }
 
-void move_cursor(int row, int column) {
-    unsigned cursor_pos = row * 80 * column;
+void move_cursor(uint32_t row, uint32_t column) {
+    unsigned cursor_pos = row * 80 + column;
     outb(0x3D4, 14);
     outb(0x3D5, cursor_pos >> 8);
-    outb(0x3D5, 15);
+    outb(0x3D4, 15);
     outb(0x3D5, cursor_pos);
 }
 

@@ -5,6 +5,8 @@
 #include <kernel/tty.h>
 #include <kernel/dt.h>
 #include <kernel/util.h>
+#include <kernel/timer.h>
+#include <kernel/io.h>
 #include <kernel_ext/multiboot.h>
 
 //#include <stdio.h>
@@ -16,7 +18,7 @@
 #include <string.h>
 #include <cpuid.h>
 
-#include <kernel/io.h>
+
 
 
 void putpixel(int pos_x, int pos_y, unsigned char VGA_COLOR)
@@ -68,30 +70,6 @@ uint8_t kbdus[128] =
     0,	/* All other keys are undefined */
 };
 
-void keyboard_handler(struct regs* r)
-{
-    uint8_t scancode;
-
-    scancode = inb(0x60);
-
-    if (scancode & 0x80)
-    {
-
-    }
-    else
-    {
-        //putch(kbdus[scancode]);
-        printf("%c", kbdus[scancode]);
-    }
-    
-}
-
-void keyborad_install(void)
-{
-    irq_install_handler(1, keyboard_handler);
-}
-
-
 void kernel_main(multiboot_info_t* mbd, uint32_t magic) {
     terminal_initialize();
 
@@ -113,36 +91,35 @@ void kernel_main(multiboot_info_t* mbd, uint32_t magic) {
     printf(" OK\n");
 
     // Allow Interrupts
-    asm volatile("sti"); 
+    asm volatile("sti");
+
+    // Enable Cursor
+    // Apparently if GRUB timeout is set to 0, GRUB wont enable the cursor.
+    // So it is always good practice to enable it anyway.
+    enable_cursor();
 
     // Check GRUB Multiboot
     multiboot_handler(mbd, magic);
 
     printf("PREBOOT INIT DONE\n");
 
+    pit_timer_install();
+
     // Kernel Start
 
     printf("Welcome to ***!\n");
     printf("(C) Goldenkrew3000 2024.\n");
 
-    // Enable Cursor
-    // Apparently if GRUB timeout is set to 0, GRUB wont enable the cursor.
-    // So it is always good practice to enable it anyway.
-    //enable_cursor();
-    //move_cursor(5, 5);
-
-    /*
-    unsigned temp;
-    temp = 7*80+7;
-    outb(0x3D4, 14);
-    outb(0x3D5, temp >> 8);
-    outb(0x3D4, 15);
-    outb(0x3D5, temp);*/
-
-    printf("Before\n");
-
-    keyborad_install();
     
+    //move_cursor(7, 5);
+
+    printf("Waiting 5 seconds\n");
+
+    //keyborad_install();
+    //timer_wait(5000);
+
+    keyboard_install();
+
     printf("After\n");
 
     while(1) { }
@@ -151,8 +128,6 @@ void kernel_main(multiboot_info_t* mbd, uint32_t magic) {
     // TODO
     // A proper keyboard function
     // A basic shell
-    // Timers (Now that IRQ is working)
-    // Cursor handling
 
     // 미래
     // Fix general exception handler
