@@ -5,7 +5,5 @@
 
 unsigned char inb(unsigned short _port);
 void outb(unsigned short _port, unsigned char _data);
-void keyboard_handler(struct regs* r);
-void keyboard_install(void);
 
 #endif

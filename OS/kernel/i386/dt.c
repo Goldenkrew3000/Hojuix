@@ -6,11 +6,16 @@
 #include <kernel/dt.h>
 #include <kernel/io.h>
 
-struct gdt_entry gdt[5];
+#define GDT_ENTRIES 6
+
+struct gdt_entry gdt[GDT_ENTRIES];
 struct gdt_ptr gdtp;
 
 struct idt_entry idt[256];
 struct idt_ptr idtp;
+
+extern tss_entry_t tss_entry;
+extern uint32_t stack_top;
 
 void gdt_set_gate(uint32_t num, uint32_t base, uint32_t limit, uint8_t access, uint8_t granularity) {
     // Setup the descriptor base address
@@ -34,7 +39,7 @@ void gdt_set_gate(uint32_t num, uint32_t base, uint32_t limit, uint8_t access, u
 
 void gdt_init() {
     // Setup the GDT pointer and limit
-    gdtp.limit = (sizeof(struct gdt_entry) * 5) - 1; // 3 Segments
+    gdtp.limit = (sizeof(struct gdt_entry) * GDT_ENTRIES) - 1; // 3 Segments
     gdtp.base = (uint32_t)&gdt;
 
     // Null descriptor
@@ -46,11 +51,23 @@ void gdt_init() {
     // Data segment
     gdt_set_gate(2, 0, 0xFFFFFFFF, 0x92, 0xCF);
 
+    // User mode Code segment
     gdt_set_gate(3, 0, 0xFFFFFFFF, 0xFA, 0xCF);
+
+    // User mode Data segment
     gdt_set_gate(4, 0, 0xFFFFFFFF, 0xF2, 0xCF);
+
+    // TSS
+    tss_init(5, 0x10, stack_top);
 
     // Load new GDT
     load_gdt((uint32_t)&gdtp);
+
+    // Load the TSS
+    // NOTE: The TR register only takes on a new value after loading the TSS as well after the GDT
+    // NOTE: I think loading the TSS like this is only required for Software Multitasking
+    load_tss();
+    
 }
 
 void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags) {
@@ -104,6 +121,9 @@ void idt_init() {
     idt_set_gate(29, (uint32_t)isr29, 0x08, 0x8E);
     idt_set_gate(30, (uint32_t)isr30, 0x08, 0x8E);
     idt_set_gate(31, (uint32_t)isr31, 0x08, 0x8E);
+
+    // Software Interrupts
+    idt_set_gate(48, (uint32_t)isr48, 0x08, 0x8E);
 
     // Load the IDT
     load_idt((uint32_t)&idtp);
@@ -200,4 +220,29 @@ void irq_handler(struct regs* r) {
 
     // In either case, we need to send an EOI to the master interrupt controller
     outb(0x20, 0x20);
+}
+
+void tss_init(uint32_t idx, uint16_t ss0, uint32_t esp0) {
+    // Create the base and limit of the TSS entry into the GDT
+    uint32_t base = (uint32_t)&tss_entry;
+    uint32_t limit = base + sizeof(tss_entry);
+
+    // Add the TSS descriptor's address to the GDT
+    gdt_set_gate(idx, base, limit, 0x89, 0x0);
+
+    // Make sure the descriptor is initially zero
+    memset(&tss_entry, 0, sizeof(tss_entry));
+
+    // Set the kernel's stack segment and pointer
+    tss_entry.ss0 = ss0;
+    tss_entry.esp0 = esp0;
+
+    // Set the CS, SS, DS, ES, FS and GS entries in the TSS.
+    // WAY more info here: https://github.com/h5n1xp/CuriOS/blob/main/SourceCode/descriptor_tables.c
+    tss_entry.cs = 0x1b;
+    tss_entry.ss = 0x13;
+    tss_entry.ds = 0x13;
+    tss_entry.es = 0x13;
+    tss_entry.fs = 0x13;
+    tss_entry.gs = 0x23;
 }

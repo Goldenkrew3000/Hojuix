@@ -14,8 +14,16 @@
 # Reserve a stack for the initial thread
 .section .bss
 .align 16
+.global tss_entry
+tss_entry:
+.skip 4
+tss_esp0:
+.skip 8
+tss_esp1:
+.skip 104
 stack_bottom:
 .skip 16384 # 16KB
+.global stack_top
 stack_top:
 
 # Kernel entry point
@@ -61,6 +69,12 @@ farjump:
 load_idt:
     movl 4(%esp), %eax
     lidt (%eax)
+    ret
+
+.global load_tss
+load_tss:
+    movw $0x2B, %ax
+    ltr %ax
     ret
 
 .global isr0
@@ -279,6 +293,14 @@ isr31:
     cli
     push $0
     push $31
+    jmp isr_common_stub
+
+# Software Interrupts
+.global isr48
+isr48:
+    cli
+    push $0
+    push $48
     jmp isr_common_stub
 
 isr_common_stub: # Could REALLY do with fixing TODO but it 'works'

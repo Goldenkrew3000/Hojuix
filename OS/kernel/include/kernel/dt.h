@@ -28,6 +28,38 @@ struct idt_ptr {
     uint32_t base;
 } __attribute__((packed));
 
+struct tss_entry_struct {
+    uint32_t prev_tss; // Used if hardware task switching is used
+    uint32_t esp0; // Stack pointer to load when we change to kernel mode
+    uint32_t ss0; // Stack segment to load when we change to kernel mode
+    uint32_t esp1; // Unused
+    uint32_t ss1;
+    uint32_t esp2;
+    uint32_t ss2;
+    uint32_t cr3;
+    uint32_t eip;
+    uint32_t eflags;
+    uint32_t eax;
+    uint32_t ecx;
+    uint32_t edx;
+    uint32_t ebx;
+    uint32_t esp;
+    uint32_t ebp;
+    uint32_t esi;
+    uint32_t edi;
+    uint32_t es; // The value to load into ES when we change to kernel mode
+    uint32_t cs; // Same
+    uint32_t ss; // Same
+    uint32_t ds; // Same
+    uint32_t fs; // Same
+    uint32_t gs; // Same
+    uint32_t ldt; // Unused
+    uint32_t trap;
+    uint32_t iomap_base;   
+} __attribute__((packed));
+
+typedef struct tss_entry_struct tss_entry_t;
+
 struct regs {
     unsigned int gs, fs, es, ds;
     unsigned int edi, esi, ebp, esp, ebx, edx, ecx, eax;
@@ -43,10 +75,12 @@ void irq_install_handler(int irq, void (*handler)(struct regs *r));
 void irq_uninstall_handler(int irq);
 void irq_remap(void);
 void irq_init();
+void tss_init(uint32_t idx, uint16_t ss0, uint32_t esp0);
 
 // External Loading Functions, held in assembly
 extern void load_gdt(uint32_t);
 extern void load_idt(uint32_t);
+extern void load_tss();
 
 // External ISR Functions, held in assembly
 extern void isr0();
@@ -81,6 +115,7 @@ extern void isr28();
 extern void isr29();
 extern void isr30();
 extern void isr31();
+extern void isr48();
 
 // External IRQ Functions, held in assembly
 extern void irq0();
