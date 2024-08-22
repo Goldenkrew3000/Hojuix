@@ -9,9 +9,9 @@ ENTRY(kernel_entry)
 /* process. */
 PHDRS
 {
-    text    PT_LOAD;
-    rodata  PT_LOAD;
-    data    PT_LOAD;
+    text    PT_LOAD    FLAGS((1 << 0) | (1 << 2)) ; /* Execute + Read */
+    rodata  PT_LOAD    FLAGS((1 << 2)) ;            /* Read only */
+    data    PT_LOAD    FLAGS((1 << 1) | (1 << 2)) ; /* Write + Read */
 }
 
 SECTIONS

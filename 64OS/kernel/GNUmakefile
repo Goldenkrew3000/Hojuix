@@ -23,7 +23,7 @@ override DEFAULT_KARCH := x86_64
 $(eval $(call DEFAULT_VAR,KARCH,$(DEFAULT_KARCH)))
 
 # User controllable C compiler command.
-override DEFAULT_KCC := clang
+override DEFAULT_KCC := cc # CLANG
 $(eval $(call DEFAULT_VAR,KCC,$(DEFAULT_KCC)))
 
 # Check if KCC is Clang.
@@ -37,7 +37,7 @@ override DEFAULT_KLD := ld.lld
 $(eval $(call DEFAULT_VAR,KLD,$(DEFAULT_KLD)))
 
 # User controllable C flags.
-override DEFAULT_KCFLAGS := -g -O2 -pipe
+override DEFAULT_KCFLAGS := -g -pipe
 $(eval $(call DEFAULT_VAR,KCFLAGS,$(DEFAULT_KCFLAGS)))
 
 # User controllable C preprocessor flags. We set none by default.
