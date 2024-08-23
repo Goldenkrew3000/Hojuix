@@ -1,6 +1,6 @@
 # Libk/c builder ported from bare bones 32bit
 
-CFLAGS="-std=gnu11 -O2 -g -ffreestanding -Wall -Wextra"
+CFLAGS="-m64 -std=gnu11 -g -ffreestanding -Wall -Wextra"
 INCLUDE="-I ../kernel/src/include -I include"
 
 clang -MD -c stdio/printf.c $CFLAGS -D__is_libk $INCLUDE -o stdio/printf.libk.o

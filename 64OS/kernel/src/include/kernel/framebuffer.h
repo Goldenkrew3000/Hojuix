@@ -7,6 +7,6 @@ void framebuffer_fill_background(uint32_t color);
 void framebuffer_scroll(int lines);
 void framebuffer_ssfn_init(struct limine_framebuffer *fb);
 void framebuffer_putchar(char character);
-size_t kern_strlen(char* string);
+void framebuffer_backspace();
 
 #endif

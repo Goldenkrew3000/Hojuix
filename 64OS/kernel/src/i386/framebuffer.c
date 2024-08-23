@@ -50,18 +50,15 @@ void framebuffer_scroll(int lines) {
     long total_size = g_fb->pitch * g_fb->height;
 
     // Scroll by copying memory upwards
-    for (int y = 0; y < total_size - line_size; y++) {
-        fb_ptr[y] = fb_ptr[y + line_size];
-    }
-
+    memcpy(g_fb->address, g_fb->address + line_size, total_size - line_size);
+    
     // Fill in background color for new line
-    /*
-    for (int y = g_fb->height - (lines * 4); y < g_fb->height; y++) {
+    for (int y = g_fb->height - lines; y < g_fb->height; y++) {
         for (int x = 0; x < g_fb->width; x++) {
             framebuffer_draw_pixel(x, y, currentColor);
         }
     }
-    */
+    
 }
 
 void framebuffer_ssfn_init(struct limine_framebuffer *fb) {
@@ -85,13 +82,18 @@ void framebuffer_putchar(char character) {
         ssfn_dst.x = 0;
         if (ssfn_dst.y + 16 >= (abs(g_fb->height / 16) * 16) ) {
             // The reason for the ABS and /16 checking is for if the screen height is not divisible by 16 (1600x900), the newline would be off screen.
-            framebuffer_scroll(4);
+            framebuffer_scroll(16);
         } else {
             ssfn_dst.y += 16;
         }
     } else {
         ssfn_putc(character);
     }
+}
+
+void framebuffer_backspace() {
+    // Move back 9 pixels (8 for the character), and 1 because it doesnt look right otherwise
+    ssfn_dst.x -= 9;
 }
 
 

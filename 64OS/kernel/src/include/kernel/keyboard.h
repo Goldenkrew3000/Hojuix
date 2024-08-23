@@ -20,7 +20,7 @@ static kbd_scancodes layer0_scancodes[] = {
     {0x0B, '0'},
     {0x0C, '-'},
     {0x0D, '='},
-    {0x0E, '?'}, // Backspace
+    //{0x0E, '?'}, // Backspace
     {0x0F, '?'}, // Tab
     {0x10, 'q'},
     {0x11, 'w'},
@@ -74,7 +74,7 @@ static kbd_scancodes layer1_scancodes[] = {
     {0x0B, ')'},
     {0x0C, '_'},
     {0x0D, '+'},
-    {0x0E, '?'}, // Backspace
+    //{0x0E, '?'}, // Backspace
     {0x0F, '?'}, // Tab
     {0x10, 'Q'},
     {0x11, 'W'},
@@ -128,7 +128,7 @@ static kbd_scancodes layer2_scancodes[] = {
     {0x0B, '0'},
     {0x0C, '-'},
     {0x0D, '='},
-    {0x0E, '?'}, // Backspace
+    //{0x0E, '?'}, // Backspace
     {0x0F, '?'}, // Tab
     {0x10, 'Q'},
     {0x11, 'W'},

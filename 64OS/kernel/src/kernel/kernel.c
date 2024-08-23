@@ -6,8 +6,10 @@
 #include <kernel/dt.h>
 #include <kernel/io.h>
 #include <kernel/timer.h>
-#include <kernel_ext/limine.h>
 #include <kernel/framebuffer.h>
+#include <kernel/pmm.h>
+#include <kernel/shell.h>
+#include <kernel_ext/limine.h>
 
 // testing
 #include <kernel/dt.h>
@@ -22,13 +24,6 @@ static volatile LIMINE_BASE_REVISION(2);
 __attribute__((used, section(".requests")))
 static volatile struct limine_framebuffer_request framebuffer_request = {
     .id = LIMINE_FRAMEBUFFER_REQUEST,
-    .revision = 0
-};
-
-// ---
-__attribute__((used, section(".requests")))
-static volatile struct limine_memmap_request memmap_request = {
-    .id = LIMINE_MEMMAP_REQUEST,
     .revision = 0
 };
 
@@ -83,68 +78,25 @@ void kernel_entry(void) {
     // Enable interrupts
     asm volatile("sti");
 
-    pit_timer_install();
-
     // Print display info to console
     printf("Framebuffer Size: %dx", framebuffer->width);
     printf("%d\n", framebuffer->height);
 
-    // TEST Scrolling
-    //framebuffer_scroll(1); // 4 lines per character
+    // Initialize PMM
+    pmmgr_init();
+    pmmgr_print_bitmap();
+
+    // Enable PIT Timer
+    pit_timer_install();
+    // TODO UNMASK
     
-
-    // TEST Memmap
-    if (memmap_request.response == NULL) {
-        krnl_halt();
-    }
-
-    uint64_t total_usable_mem = 0;
-    uint64_t total_reserved_mem = 0;
-
-    uint64_t entry_count = memmap_request.response->entry_count;
-    struct limine_memmap_entry **entries = memmap_request.response->entries;
-     for (uint64_t i = 0; i < entry_count; i++) {
-        struct limine_memmap_entry *entry = entries[i];
-
-        printf("Mem Region %llu: ", i);
-        printf("Base: 0x%lx, ", entry->base);
-        printf("Length: 0x%lx, ", entry->length);
-        printf("Type: %u\n", entry->type);
-
-        if (entry->type == LIMINE_MEMMAP_USABLE) {
-            total_usable_mem += entry->length;
-        } else {
-            total_reserved_mem += entry->length;
-        }
-    }
-
-    printf("Total reserved mem: %lld kb.\n", total_reserved_mem / 1024);
-    printf("Total usable mem: %lld kb.\n", total_usable_mem / 1024);
-
     // Enable Keyboard
-    
+    // TODO UNMASK
 
-    //uint64_t fb_width = fb->width;
-
-
-    // NOTE: Assume the framebuffer model is RGB with 32bit pixels
+    // Drop into kernel mode shell
+    shell_init();
     
-    //kernel_draw_pixel(framebuffer, 0, 0, 0xFF0000);
-    
-
-    
-    //framebuffer_putstring("Hello World!");
-
-    
-    printf("Setup!\n");
-
-    ///int num2 = 20 / 0;
-    //printf("%d\n", num2);
-    
-    
-
+    // Halt kernel, but in a running state
     while(1) { }
-
-    //hcf();
-    //krnl_halt();
+    krnl_halt();
 }

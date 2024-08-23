@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <kernel/dt.h>
 #include <kernel/keyboard.h>
+#include <kernel/framebuffer.h>
 
 bool lshift_toggle = false;
 bool rshift_toggle = false;
@@ -111,6 +112,11 @@ void irq_keyboard_handler(void*) {
         } else if (scancode == 0x58) {
             // F12 key pressed
             printf("F12 key pressed\n");
+        }
+
+
+        else if (scancode == 0x0E) {
+            framebuffer_backspace();
         }
 
         printf("%c", keyboard_scancode_conv(scancode));

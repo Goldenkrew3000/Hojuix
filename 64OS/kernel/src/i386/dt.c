@@ -237,16 +237,23 @@ void irq_remap() {
     outb(0xA1, 0x02);
     outb(0x21, 0x01);
     outb(0xA1, 0x01);
-    outb(0x21, 0x00); // Mask interrupts --> 0xFF
-    outb(0xA1, 0x00); // Same here
+    outb(0x21, 0xFF); // Mask interrupts --> 0xFF
+    outb(0xA1, 0xFF); // Same here
 }
 
 void irq_init() {
     irq_remap();
 
+    uint8_t irq_mask;
+
     idt_setDescriptor(32, &irq_pit_timer_handler, 14, 0);
+    irq_mask ^= (1 << 0);
+    
     idt_setDescriptor(33, &irq_keyboard_handler, 14, 0);
-    //outb(0x21, ~(1 << 1));
+    irq_mask ^= (1 << 1);
+
+    outb(0x21, irq_mask);
+    
 
     /*
     
