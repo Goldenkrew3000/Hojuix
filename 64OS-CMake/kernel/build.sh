@@ -1,11 +1,12 @@
-CC="gcc"
-LD="ld.lld"
+CC="x86_64-linux-gnu-gcc"
+LD="x86_64-linux-gnu-ld"
+OBJCPY="x86_64-linux-gnu-objcopy"
 
 CFLAGS="-g -pipe -Wall -Wextra -std=gnu11 -nostdinc -ffreestanding -fno-stack-protector -fno-stack-check -fno-lto -fno-PIC -ffunction-sections -fdata-sections -m64 -march=x86-64 -mno-80387 -mno-mmx -mno-sse -mno-sse2 -mno-red-zone -mcmodel=kernel -isystem freestanding-headers"
 LINK="-L ../libc"
 INCL="-I ../libc/include -I ../common -I src/include"
 
-LINKFLAGS="-m elf_x86_64 -nostdlib -lk -static -z max-page-size=0x1000 -gc-sections -T linker-x86_64.ld -L ../libc unifont.o"
+LINKFLAGS="-m elf_x86_64 -nostdlib -lk -static -z max-page-size=0x1000 -gc-sections -T linker-x86_64.ld -L ../libc obj/unifont.o"
 
 mkdir obj
 mkdir obj/i386
@@ -25,7 +26,10 @@ $CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/vmm.c -o obj/i386/vmm.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/kernel/cc-runtime.c -o obj/kernel/cc-runtime.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/kernel/kernel.c -o obj/kernel/kernel.o
 
-ld \
+${OBJCPY} -O elf64-x86-64 -B i386:x86-64 -I binary unifont.sfn obj/unifont.o
+readelf -s --wide obj/unifont.o
+
+${LD} \
 obj/i386/asm-utils.S.o \
 obj/i386/dt.o \
 obj/i386/framebuffer.o \
