@@ -186,10 +186,10 @@ void *pmmgr_malloc(uint64_t size) { // Size in bytes
         pmmgr_set_used(free_page + i);
     }
 
-    return (void*)(free_page * 0x1000); // Returns physical address
+    return (void*)(free_page * 0x1000 + hhdm_offset); // Returns virtual adddress
 }
 
-void pmmgr_free(void *addr, uint64_t size) {
+void pmmgr_free(void *addr, uint64_t size) { // 현재 몰라...
     uint64_t page = (uint64_t)addr / 0x1000;
     uint64_t pages = (size + 0x1000 - 1) / 0x1000;
 
@@ -202,4 +202,8 @@ void pmmgr_print_bitmap() {
     printf("Total Bitmap Pages: %lld, ", pmmgr_total_bitmap_pages);
     printf("Used Bitmap Pages: %lld, ", pmmgr_used_bitmap_pages);
     printf("Free Bitmap Pages: %lld\n", pmmgr_free_bitmap_pages);
+}
+
+volatile struct limine_memmap_request pmmgr_return_memmap() {
+    return memmap_request;
 }

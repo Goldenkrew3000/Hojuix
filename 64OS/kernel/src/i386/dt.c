@@ -12,9 +12,7 @@
 // GDT
 */
 
-// DO NOT CHANGE THE GDT CODE
-// FUCKING 0xD GENERAL PROTECTION FAULTS FUCK YOUUUUUU
-// I SPENT LIKE 2 DAYS TRYING TO GET THIS TO WORK, 32BIT WAS EASY FUCK YOU
+// MASSIVE Thank You to SpecOS for helping me with the GDT and IDT code!!
 
 struct GDTEntry gdt[5];
 
@@ -244,13 +242,18 @@ void irq_remap() {
 void irq_init() {
     irq_remap();
 
+    // Set handler functions
+    idt_setDescriptor(32, &irq_pit_timer_handler, 14, 0);
+    idt_setDescriptor(33, &irq_keyboard_handler, 14, 0);
+
     uint8_t irq_mask;
 
-    idt_setDescriptor(32, &irq_pit_timer_handler, 14, 0);
-    irq_mask ^= (1 << 0);
-    
-    idt_setDescriptor(33, &irq_keyboard_handler, 14, 0);
+    // Unmask the keyboard IRQ
     irq_mask ^= (1 << 1);
+
+    // Unmask the PIT timer IRQ and set frequency
+    irq_mask ^= (1 << 0);
+    pit_timer_install();
 
     outb(0x21, irq_mask);
     
@@ -274,5 +277,3 @@ void irq_init() {
     idt_set_gate(47, (uint32_t)irq15, 0x08, 0x8E);
     */
 }
-
-

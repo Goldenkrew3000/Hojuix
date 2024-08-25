@@ -7,12 +7,12 @@
 #include <kernel/io.h>
 #include <kernel/timer.h>
 #include <kernel/framebuffer.h>
+#include <kernel/utils.h>
+#include <kernel/dt.h>
 #include <kernel/pmm.h>
+#include <kernel/vmm.h>
 #include <kernel/shell.h>
 #include <kernel_ext/limine.h>
-
-// testing
-#include <kernel/dt.h>
 
 extern void krnl_halt();
 
@@ -26,6 +26,22 @@ static volatile struct limine_framebuffer_request framebuffer_request = {
     .id = LIMINE_FRAMEBUFFER_REQUEST,
     .revision = 0
 };
+
+
+
+
+
+
+
+//fuck you
+volatile struct limine_kernel_address_request kernel_address_request = {
+    .id = LIMINE_KERNEL_ADDRESS_REQUEST,
+    .revision = 0
+};
+//t dodo 확인 ㅅㅂ
+
+
+
 
 // Define the start and end markers for the limine requests
 __attribute__((used, section(".request_start_marker")))
@@ -60,6 +76,9 @@ void kernel_entry(void) {
     printf("HOJUIX 0.2A x86_64 - Build Time: %s ", __DATE__);
     printf("%s\n", __TIME__);
 
+    // Print CPUID
+    print_cpuid();
+
     // Initialize GDT
     printf("Initializing GDT...");
     gdt_init();
@@ -86,12 +105,22 @@ void kernel_entry(void) {
     pmmgr_init();
     pmmgr_print_bitmap();
 
-    // Enable PIT Timer
-    pit_timer_install();
-    // TODO UNMASK
-    
-    // Enable Keyboard
-    // TODO UNMASK
+
+    //volatile struct limine_memmap_request aa = pmmgr_return_memmap();
+
+
+    //uint64_t virt = kernel_address_request.response->virtual_base;
+    //uint64_t phys = kernel_address_request.response->physical_base;
+    // Initialize VMM
+    //vmmgr_init();
+
+    //pmmgr_print_bitmap();
+
+    //
+
+
+
+
 
     // Drop into kernel mode shell
     shell_init();

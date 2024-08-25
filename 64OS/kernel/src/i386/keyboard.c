@@ -9,6 +9,9 @@
 
 bool lshift_toggle = false;
 bool rshift_toggle = false;
+bool lctrl_toggle = false;
+bool lalt_toggle = false;
+
 bool capslock_toggle = false;
 bool scrolllock_toggle = false;
 bool numlock_toggle = false;
@@ -73,53 +76,45 @@ void irq_keyboard_handler(void*) {
         } else if (scancode == 0xB6) {
             // Right shift released
             rshift_toggle = false;
-        }
-        
-        
-        else if (scancode == 0x3B) {
-            // F1 key pressed
-            printf("F1 key pressed\n");
-        } else if (scancode == 0x3C) {
-            // F2 key pressed
-            printf("F2 key pressed\n");
-        } else if (scancode == 0x3D) {
-            // F3 key pressed
-            printf("F3 key pressed\n");
-        } else if (scancode == 0x3E) {
-            // F4 key pressed
-            printf("F4 key pressed\n");
-        } else if (scancode == 0x3F) {
-            // F5 key pressed
-            printf("F5 key pressed\n");
-        } else if (scancode == 0x40) {
-            // F6 key pressed
-            printf("F6 key pressed\n");
-        } else if (scancode == 0x41) {
-            // F7 key pressed
-            printf("F7 key pressed\n");
-        } else if (scancode == 0x42) {
-            // F8 key pressed
-            printf("F8 key pressed\n");
-        } else if (scancode == 0x43) {
-            // F9 key pressed
-            printf("F9 key pressed\n");
-        } else if (scancode == 0x44) {
-            // F10 key pressed
-            printf("F10 key pressed\n");
-        } else if (scancode == 0x57) {
-            // F11 key pressed
-            printf("F11 key pressed\n");
-        } else if (scancode == 0x58) {
-            // F12 key pressed
-            printf("F12 key pressed\n");
-        }
-
-
-        else if (scancode == 0x0E) {
+        } else if (scancode == 0x1D) {
+            // Left control pressed
+            lctrl_toggle = true;
+        } else if (scancode == 0x9D) {
+            // Left control released
+            lctrl_toggle = false;
+        } else if (scancode == 0x38) {
+            // Left alt pressed
+            lalt_toggle = true;
+        } else if (scancode == 0xB8) {
+            // Left alt released
+            lalt_toggle = false;
+        } else if (scancode == 0x0E) {
+            // Backspace key pressed
             framebuffer_backspace();
+        } else if (scancode == 0x76) {
+            // Escape key pressed
+            printf("Escape key pressed\n");
         }
+        
+        
+        
+        /*
+        else if () {
+            // Page Up pressed 특별
+        } else if () {
+            // Page Down pressed 특별
+        } else if () {
+            // Home pressed 특별
+        } else if () {
+            // End pressed 특별
+        } else if () {
+            // Delete pressed 특별
+        }*/ else {
+            printf("%c", keyboard_scancode_conv(scancode));
+        }
+        // 0xE0, 0xDB --> left GUI pressed (super key)
 
-        printf("%c", keyboard_scancode_conv(scancode));
+        
     }
 
     
