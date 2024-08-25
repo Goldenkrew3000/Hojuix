@@ -23,7 +23,7 @@ override DEFAULT_KARCH := x86_64
 $(eval $(call DEFAULT_VAR,KARCH,$(DEFAULT_KARCH)))
 
 # User controllable C compiler command.
-override DEFAULT_KCC := cc # CLANG
+override DEFAULT_KCC := clang # CLANG
 $(eval $(call DEFAULT_VAR,KCC,$(DEFAULT_KCC)))
 
 # Check if KCC is Clang.
@@ -76,6 +76,7 @@ override KCFLAGS += \
 override KCPPFLAGS := \
     -L ../libc \
     -I ../libc/include \
+    -I freestanding-headers \
     -I src/include \
     -I src/ \
     $(KCPPFLAGS) \
