@@ -9,6 +9,7 @@
 #include <kernel/framebuffer.h>
 #include <kernel/utils.h>
 #include <kernel/dt.h>
+#include <kernel/acpi.h>
 #include <kernel/pmm.h>
 #include <kernel/vmm.h>
 #include <kernel/shell.h>
@@ -26,6 +27,15 @@ static volatile struct limine_framebuffer_request framebuffer_request = {
     .id = LIMINE_FRAMEBUFFER_REQUEST,
     .revision = 0
 };
+
+
+
+
+
+
+
+
+
 
 
 
@@ -121,6 +131,19 @@ void kernel_entry(void) {
 
 
 
+
+    // ACPI Test
+    acpi_init();
+    //
+    //
+    //
+    //
+    //
+    //uint64_t* rsdp_addr = rsdp_request.response->address;
+    //printf("RSDP addr: %p\n", rsdp_addr); // Is in virtual addr
+
+    // Check the RSDP Checksum
+    //printf("Checksum: %lx\n", (uint64_t)*rsdp_addr);
 
     // Drop into kernel mode shell
     shell_init();

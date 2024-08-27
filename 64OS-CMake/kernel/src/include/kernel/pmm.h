@@ -13,4 +13,4 @@ void pmmgr_free(void *addr, uint64_t size);
 void pmmgr_print_bitmap();
 volatile struct limine_memmap_request pmmgr_return_memmap();
 
-#endif%  
+#endif 

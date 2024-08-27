@@ -7,6 +7,8 @@
 #include <kernel/keyboard.h>
 #include <kernel/framebuffer.h>
 
+bool wasSpecialInterrupt = false;
+
 bool lshift_toggle = false;
 bool rshift_toggle = false;
 bool lctrl_toggle = false;
@@ -55,6 +57,10 @@ void irq_keyboard_handler(void*) {
     unsigned char status = inb(0x64);
     if (status & 0x01) {
         uint8_t scancode = inb(0x60);
+
+
+
+
         if (scancode == 0x3A) {
             // Capslock pressed
             keyboard_capslock();
@@ -96,7 +102,21 @@ void irq_keyboard_handler(void*) {
             printf("Escape key pressed\n");
         }
         
-        
+
+
+
+        else if (scancode == 0xE0) {
+            wasSpecialInterrupt = true;
+        }
+
+
+        else if (scancode == 0xDB) {
+            if (wasSpecialInterrupt) {
+                printf("Left Super Key pressed\n");
+                wasSpecialInterrupt = false;
+            }
+        }
+
         
         /*
         else if () {

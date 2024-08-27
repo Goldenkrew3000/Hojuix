@@ -22,6 +22,7 @@ $CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/shell.c -o obj/i386/shell.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/timer.c -o obj/i386/timer.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/utils.c -o obj/i386/utils.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/vmm.c -o obj/i386/vmm.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/acpi.c -o obj/i386/acpi.o
 
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/kernel/cc-runtime.c -o obj/kernel/cc-runtime.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/kernel/kernel.c -o obj/kernel/kernel.o
@@ -40,6 +41,7 @@ obj/i386/shell.o \
 obj/i386/timer.o \
 obj/i386/utils.o \
 obj/i386/vmm.o \
+obj/i386/acpi.o \
 obj/kernel/cc-runtime.o \
 obj/kernel/kernel.o \
 $LINKFLAGS -o kernel.macho
