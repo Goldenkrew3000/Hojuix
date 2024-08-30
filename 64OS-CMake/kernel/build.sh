@@ -1,5 +1,5 @@
-CC="x86_64-linux-gnu-gcc"
-LD="x86_64-linux-gnu-ld"
+CC="gcc"
+LD="ld"
 OBJCPY="x86_64-linux-gnu-objcopy"
 
 CFLAGS="-g -pipe -Wall -Wextra -std=gnu11 -nostdinc -ffreestanding -fno-stack-protector -fno-stack-check -fno-lto -fno-PIC -ffunction-sections -fdata-sections -m64 -march=x86-64 -mno-80387 -mno-mmx -mno-sse -mno-sse2 -mno-red-zone -mcmodel=kernel -isystem freestanding-headers"
@@ -10,6 +10,7 @@ LINKFLAGS="-m elf_x86_64 -nostdlib -lk -static -z max-page-size=0x1000 -gc-secti
 
 mkdir obj
 mkdir obj/i386
+mkdir obj/i386/drivers
 mkdir obj/kernel
 
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/asm-utils.S -o obj/i386/asm-utils.S.o
@@ -22,7 +23,12 @@ $CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/shell.c -o obj/i386/shell.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/timer.c -o obj/i386/timer.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/utils.c -o obj/i386/utils.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/vmm.c -o obj/i386/vmm.o
-$CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/acpi.c -o obj/i386/acpi.o
+
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/drivers/acpi.c -o obj/i386/drivers/acpi.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/drivers/pci.c -o obj/i386/drivers/pci.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/drivers/ahci.c -o obj/i386/drivers/ahci.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/drivers/rtc.c -o obj/i386/drivers/rtc.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/drivers/rs232.c -o obj/i386/drivers/rs232.o
 
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/kernel/cc-runtime.c -o obj/kernel/cc-runtime.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/kernel/kernel.c -o obj/kernel/kernel.o
@@ -41,7 +47,11 @@ obj/i386/shell.o \
 obj/i386/timer.o \
 obj/i386/utils.o \
 obj/i386/vmm.o \
-obj/i386/acpi.o \
+obj/i386/drivers/acpi.o \
+obj/i386/drivers/pci.o \
+obj/i386/drivers/ahci.o \
+obj/i386/drivers/rtc.o \
+obj/i386/drivers/rs232.o \
 obj/kernel/cc-runtime.o \
 obj/kernel/kernel.o \
 $LINKFLAGS -o kernel.macho

@@ -1,7 +1,7 @@
 # Libk/c builder ported from bare bones 32bit
 
-CC="x86_64-linux-gnu-gcc"
-AR="x86_64-linux-gnu-ar"
+CC="gcc"
+AR="ar"
 CFLAGS="-m64 -std=gnu11 -g -ffreestanding -Wall -Wextra"
 INCLUDE="-I ../common -I ../kernel/src/include -I include"
 

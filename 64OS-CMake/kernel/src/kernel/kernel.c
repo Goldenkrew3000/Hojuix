@@ -9,11 +9,14 @@
 #include <kernel/framebuffer.h>
 #include <kernel/utils.h>
 #include <kernel/dt.h>
-#include <kernel/acpi.h>
+#include <kernel/drivers/acpi.h>
+#include <kernel/drivers/pci.h>
 #include <kernel/pmm.h>
 #include <kernel/vmm.h>
 #include <kernel/shell.h>
 #include <kernel_ext/limine.h>
+
+#include <kernel/drivers/rs232.h>
 
 extern void krnl_halt();
 
@@ -28,13 +31,12 @@ static volatile struct limine_framebuffer_request framebuffer_request = {
     .revision = 0
 };
 
-
-
-
-
-
-
-
+// Request the HHDM Offset
+/*__attribute__((used, section(".requests")))
+static volatile struct limine_hhdm_request hhdm_request = {
+    .id = LIMINE_HHDM_REQUEST,
+    .revision = 0
+};*/
 
 
 
@@ -44,10 +46,7 @@ static volatile struct limine_framebuffer_request framebuffer_request = {
 
 
 //fuck you
-volatile struct limine_kernel_address_request kernel_address_request = {
-    .id = LIMINE_KERNEL_ADDRESS_REQUEST,
-    .revision = 0
-};
+
 //t dodo 확인 ㅅㅂ
 
 
@@ -115,35 +114,21 @@ void kernel_entry(void) {
     pmmgr_init();
     pmmgr_print_bitmap();
 
-
-    //volatile struct limine_memmap_request aa = pmmgr_return_memmap();
-
-
-    //uint64_t virt = kernel_address_request.response->virtual_base;
-    //uint64_t phys = kernel_address_request.response->physical_base;
     // Initialize VMM
+    asm volatile("cli");
     //vmmgr_init();
-
     //pmmgr_print_bitmap();
 
-    //
+    asm volatile("sti");
 
+    // Initialize RS232
+    rs232_init(0x3F8, 115200);
 
+    // Initialize ACPI
+    //acpi_init();
 
-
-
-    // ACPI Test
-    acpi_init();
-    //
-    //
-    //
-    //
-    //
-    //uint64_t* rsdp_addr = rsdp_request.response->address;
-    //printf("RSDP addr: %p\n", rsdp_addr); // Is in virtual addr
-
-    // Check the RSDP Checksum
-    //printf("Checksum: %lx\n", (uint64_t)*rsdp_addr);
+    // Initialize PCI
+    //pci_init();
 
     // Drop into kernel mode shell
     shell_init();

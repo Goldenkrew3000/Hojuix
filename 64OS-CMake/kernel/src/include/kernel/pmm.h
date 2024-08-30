@@ -11,6 +11,6 @@ uint64_t pmmgr_find_free_pages(uint64_t size);
 void *pmmgr_malloc(uint64_t size);
 void pmmgr_free(void *addr, uint64_t size);
 void pmmgr_print_bitmap();
-volatile struct limine_memmap_request pmmgr_return_memmap();
+//volatile struct limine_memmap_request pmmgr_return_memmap();
 
 #endif 

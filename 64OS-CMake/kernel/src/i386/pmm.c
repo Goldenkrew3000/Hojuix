@@ -18,18 +18,11 @@ static volatile struct limine_memmap_request memmap_request = {
     .revision = 0
 };
 
-// Request to get the HHDM
-__attribute__((used, section(".requests")))
-static volatile struct limine_hhdm_request hhdm_request = {
-    .id = LIMINE_HHDM_REQUEST,
-    .revision = 0
-};
-
 // Limine Memory Map Variables
 uint64_t total_usable_mem = 0;
 uint64_t total_reserved_mem = 0;
 uint64_t total_mem = 0;
-uint64_t hhdm_offset;
+uint64_t* hhdm_offset = 0xFFFF800000000000; // Hardcoded due to it always being the same
 
 // PMM Variables
 uint64_t pmmgr_total_bitmap_pages = 0;
@@ -42,12 +35,6 @@ void pmmgr_init() { // Feed mem_size ALL (All types) memory, in bytes, and bitma
     // Check we have a memory map response
     if (memmap_request.response == NULL) {
         printf("Limine Memory Map response does not exist.\n");
-        krnl_halt();
-    }
-
-    // Check we have a HHDM response
-    if (hhdm_request.response == NULL) {
-        printf("Limine HHDM response does not exist.\n");
         krnl_halt();
     }
 
@@ -69,9 +56,6 @@ void pmmgr_init() { // Feed mem_size ALL (All types) memory, in bytes, and bitma
         }
     }
 
-    // Fetch the HHDM info from limine
-    hhdm_offset = hhdm_request.response->offset;
-
     // Print basic memory info to console
     printf("Total Memory: %lld mb (", total_mem / 1024 / 1024);
     printf("%lld mb usable / ", total_usable_mem / 1024 / 1024);
@@ -90,7 +74,7 @@ void pmmgr_init() { // Feed mem_size ALL (All types) memory, in bytes, and bitma
                 // Found a space large enough
                 //printf("Bitmap Location: 0x%lx - ", entry->base);
                 //printf("0x%lx\n", entry->base + pmmgr_bitmap_bytes);
-                bitmap = (void*) (entry->base + hhdm_offset);
+                bitmap = (void*) (entry->base + (uint64_t)hhdm_offset);
                 break;
             }
         }
@@ -110,7 +94,7 @@ void pmmgr_init() { // Feed mem_size ALL (All types) memory, in bytes, and bitma
         struct limine_memmap_entry *entry = entries[i];
         if (entry->type == LIMINE_MEMMAP_USABLE || entry->type == LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE) {
             
-            if (entry->base == (uint64_t)bitmap - hhdm_offset) {
+            if (entry->base == (uint64_t)bitmap - (uint64_t)hhdm_offset) {
                 // This is where the bitmap is stored, do not want to mark the bitmap as free memory
                 uint64_t bitmap_end_byte = (uint64_t)bitmap + pmmgr_bitmap_bytes;
                 uint64_t bitmap_end_page = ((bitmap_end_byte + 0x1000 - 1) / 0x1000) * 0x1000;
@@ -182,11 +166,13 @@ void *pmmgr_malloc(uint64_t size) { // Size in bytes
     uint64_t needed_pages = (size + 0x1000 - 1) / 0x1000;
     uint64_t free_page = pmmgr_find_free_pages(size);
 
+    //printf("Allocating free page\n");
+
     for (uint64_t i = 0; i < needed_pages; i++) {
         pmmgr_set_used(free_page + i);
     }
 
-    return (void*)(free_page * 0x1000 + hhdm_offset); // Returns virtual adddress
+    return (void*)(free_page * 0x1000 + (uint64_t)hhdm_offset); // Returns virtual adddress
 }
 
 void pmmgr_free(void *addr, uint64_t size) { // 현재 몰라...
@@ -204,6 +190,8 @@ void pmmgr_print_bitmap() {
     printf("Free Bitmap Pages: %lld\n", pmmgr_free_bitmap_pages);
 }
 
+/*
 volatile struct limine_memmap_request pmmgr_return_memmap() {
     return memmap_request;
 }
+*/
