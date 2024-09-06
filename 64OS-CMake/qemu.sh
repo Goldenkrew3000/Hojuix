@@ -1,1 +1,1 @@
-qemu-system-x86_64 -M q35 -m 128 -drive if=pflash,unit=0,format=raw,file=qemu/ovmf-code-x86_64.fd,readonly=on -drive if=pflash,unit=1,format=raw,file=qemu/ovmf-vars-x86_64.fd -cdrom qemu/hojuix.iso -d int
+qemu-system-x86_64 -M q35 -m 128 -drive if=pflash,unit=0,format=raw,file=qemu/ovmf-code-x86_64.fd,readonly=on -drive if=pflash,unit=1,format=raw,file=qemu/ovmf-vars-x86_64.fd -cdrom qemu/hojuix.iso -serial stdio

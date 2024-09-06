@@ -38,20 +38,6 @@ static volatile struct limine_hhdm_request hhdm_request = {
     .revision = 0
 };*/
 
-
-
-
-
-
-
-
-//fuck you
-
-//t dodo 확인 ㅅㅂ
-
-
-
-
 // Define the start and end markers for the limine requests
 __attribute__((used, section(".request_start_marker")))
 static volatile LIMINE_REQUESTS_START_MARKER;
@@ -103,8 +89,7 @@ void kernel_entry(void) {
     irq_init();
     printf(" OK\n");
     
-    // Enable interrupts
-    asm volatile("sti");
+    
 
     // Print display info to console
     printf("Framebuffer Size: %dx", framebuffer->width);
@@ -115,14 +100,17 @@ void kernel_entry(void) {
     pmmgr_print_bitmap();
 
     // Initialize VMM
-    asm volatile("cli");
     //vmmgr_init();
     //pmmgr_print_bitmap();
 
+    // Enable interrupts
     asm volatile("sti");
 
     // Initialize RS232
-    rs232_init(0x3F8, 115200);
+    int ret = rs232_init(1, 57600);
+    printf("ret: %d\n", ret);
+    rs232_write(1, 'u');
+
 
     // Initialize ACPI
     //acpi_init();

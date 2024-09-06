@@ -8,6 +8,8 @@
 #include <kernel/keyboard.h>
 #include <kernel/timer.h>
 
+#include <kernel/drivers/rs232.h>
+
 /*
 // GDT
 */
@@ -242,9 +244,13 @@ void irq_remap() {
 void irq_init() {
     irq_remap();
 
+    // NOTE: As per the OSDev Wiki, IRQ 0 is IDT 32
+
     // Set handler functions
-    idt_setDescriptor(32, &irq_pit_timer_handler, 14, 0);
-    idt_setDescriptor(33, &irq_keyboard_handler, 14, 0);
+    idt_setDescriptor(32, &irq_pit_timer_handler, 14, 0); // PIT Timer - IRQ 0
+    idt_setDescriptor(33, &irq_keyboard_handler, 14, 0); // PS/2 Keyboard - IRQ 1
+    idt_setDescriptor(35, &irq_rs232_port2_handler, 14, 0); // RS232 Port 2 - IRQ 3
+    idt_setDescriptor(36, &irq_rs232_port1_handler, 14, 0); // RS232 Port 1 - IRQ 4
 
     uint8_t irq_mask;
 
@@ -255,6 +261,11 @@ void irq_init() {
     irq_mask ^= (1 << 0);
     pit_timer_install();
 
+    // Unmask RS232 Port 1 and 2
+    irq_mask ^= (1 << 3);
+    irq_mask ^= (1 << 4);
+
+    // Send the IRQ Mask
     outb(0x21, irq_mask);
     
 
