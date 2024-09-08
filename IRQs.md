@@ -1,0 +1,5 @@
+IRQ 0 --> ISR 32
+IRQ 1 --> ISR 33
+IRQ 2 --> ISR 34
+IRQ 3 --> ISR 35
+IRQ 4 --> ISR 36

@@ -1,12 +1,14 @@
-CC="gcc"
-LD="ld"
-OBJCPY="objcopy"
+CC="x86_64-linux-gnu-gcc"
+LD="x86_64-linux-gnu-ld"
+OBJCPY="x86_64-linux-gnu-objcopy"
 
 CFLAGS="-g -pipe -Wall -Wextra -std=gnu11 -nostdinc -ffreestanding -fno-stack-protector -fno-stack-check -fno-lto -fno-PIC -ffunction-sections -fdata-sections -m64 -march=x86-64 -mno-80387 -mno-mmx -mno-sse -mno-sse2 -mno-red-zone -mcmodel=kernel -isystem freestanding-headers"
 LINK="-L ../libc"
 INCL="-I ../libc/include -I ../common -I src/include"
 
 LINKFLAGS="-m elf_x86_64 -nostdlib -lk -static -z max-page-size=0x1000 -gc-sections -T linker-x86_64.ld -L ../libc obj/unifont.o"
+
+rm kernel.macho
 
 mkdir obj
 mkdir obj/i386

@@ -265,26 +265,21 @@ void irq_init() {
     irq_mask ^= (1 << 3);
     irq_mask ^= (1 << 4);
 
+    //idt_setDescriptor(34, &irq_unknown_handler, 14, 0);
+    //idt_setDescriptor(35, &irq_unknown_handler, 14, 0);
+    //idt_setDescriptor(37, &irq_unknown_handler, 14, 0);
+    //idt_setDescriptor(38, &irq_unknown_handler, 14, 0);
+    //idt_setDescriptor(39, &irq_unknown_handler, 14, 0);
+
+    // Unmask interrupts
+    //outb(0x21, 0x00);
+
     // Send the IRQ Mask
     outb(0x21, irq_mask);
     
+}
 
-    /*
-    
-    idt_set_gate(33, (uint32_t)irq1, 0x08, 0x8E);
-    idt_set_gate(34, (uint32_t)irq2, 0x08, 0x8E);
-    idt_set_gate(35, (uint32_t)irq3, 0x08, 0x8E);
-    idt_set_gate(36, (uint32_t)irq4, 0x08, 0x8E);
-    idt_set_gate(37, (uint32_t)irq5, 0x08, 0x8E);
-    idt_set_gate(38, (uint32_t)irq6, 0x08, 0x8E);
-    idt_set_gate(39, (uint32_t)irq7, 0x08, 0x8E);
-    idt_set_gate(40, (uint32_t)irq8, 0x08, 0x8E);
-    idt_set_gate(41, (uint32_t)irq9, 0x08, 0x8E);
-    idt_set_gate(42, (uint32_t)irq10, 0x08, 0x8E);
-    idt_set_gate(43, (uint32_t)irq11, 0x08, 0x8E);
-    idt_set_gate(44, (uint32_t)irq12, 0x08, 0x8E);
-    idt_set_gate(45, (uint32_t)irq13, 0x08, 0x8E);
-    idt_set_gate(46, (uint32_t)irq14, 0x08, 0x8E);
-    idt_set_gate(47, (uint32_t)irq15, 0x08, 0x8E);
-    */
+__attribute__((interrupt))
+void irq_unknown_handler(void*) {
+    printf("Received an unknown interrupt\n");
 }

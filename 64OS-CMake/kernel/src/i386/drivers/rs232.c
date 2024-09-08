@@ -3,7 +3,15 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <kernel/io.h>
+#include <kernel/drivers/rs232.h>
+
+// TODO: Add a check to make sure that the UART port is initialized before trying to read / write to it. (Just probably a boolean for each)
+// TODO: Optimize the port to hex port conversion (Only really need to do it once, when the rest of the kernel interacts with the
+// RS232 write function, not for everything)
+// TODO: Change all the generic stuff (int etc) to uints (Probably anyway, would be VERY good practice in kernel space)
+// TODO: Also map this shit out so its easier to figure out what the fuck to do here...
 
 /*
 // RS232 Port Addresses
@@ -13,8 +21,9 @@
 */
 
 /*
-// rs232_port_decider(). Returns 0 of port does not exist.
-//
+// rs232_port_decider().
+// Takes a port number (1 --> COM1) and returns the hex address (0x3F8)
+// Returns 0 if port does not exist.
 */
 int rs232_port_decider(int port) {
     // Convert port number to real port
@@ -32,16 +41,16 @@ int rs232_port_decider(int port) {
 
 /*
 // rs232_baudrate_decider().
-// Takes a generic baudrate and returns the divisor.
-// Returns 0 if the baudrate is not standard.
+// Takes a generic baudrate and returns the required divisor.
+// Returns 0 if the baudrate is not standard (Non-standard baudrates are NOT supported currently)
 */
 int rs232_baudrate_decider(int baudrate) {
     if (baudrate == 38400) {
-        //
+        return 3;
     } else if (baudrate == 57600) {
-        //
+        return 2;
     } else if (baudrate == 115200) {
-        //
+        return 1;
     } else {
         // Baudrate is invalid
         return 0;
@@ -112,14 +121,58 @@ int rs232_write(int port, char character) {
     return 0;
 }
 
+int rs232_writeline(int port, char* string) {
+    // Convert port number to real port
+    int hex_port = rs232_port_decider(port);
+    if (port == 0) {
+        // Serial port does not exist
+        return 1;
+    }
+
+    // Fetch the size of the string, and write the string
+    for (int i = 0; i < strlen(string); i++) {
+        rs232_write(port, string[i]);
+    }
+}
+
+int rs232_received(int port) {
+    // Convert port number to real port
+    int hex_port = rs232_port_decider(port);
+    if (port == 0) {
+        // Serial port does not exist
+        return 1;
+    }
+
+    return inb(hex_port + 5) & 1;
+}
+
+char rs232_read(int port) {
+    // Convert port number to real port
+    int hex_port = rs232_port_decider(port);
+    if (port == 0) {
+        // Serial port does not exist
+        return 1;
+    }
+
+    while (rs232_received(1) == 0);
+
+    return inb(hex_port);
+}
+
 __attribute__((interrupt))
 void irq_rs232_port1_handler(void*) {
     // IRQ Handler for serial port 1 (0x3F8)
     printf("Data received on Serial Port 1\n");
+    
+    // ACK the interrupt
+    irq_handler(36);
 }
 
 __attribute__((interrupt))
 void irq_rs232_port2_handler(void*) {
     // IRQ Handler for serial port 2 (0x2F8)
     printf("Data received on Serial Port 2\n");
+    
+    // ACK the interrupt
+    irq_handler(35);
 }

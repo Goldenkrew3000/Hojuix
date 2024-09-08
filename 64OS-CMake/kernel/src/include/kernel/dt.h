@@ -58,5 +58,6 @@ void idt_init();
 void irq_handler(int int_no);
 void irq_remap();
 void irq_init();
+void irq_unknown_handler(void*);
 
 #endif

@@ -108,12 +108,13 @@ void kernel_entry(void) {
 
     // Initialize RS232
     int ret = rs232_init(1, 57600);
-    printf("ret: %d\n", ret);
-    rs232_write(1, 'u');
+    rs232_writeline(1, "Hello world from RS232!\n");
+    char a = rs232_read(1);
+    printf("Char received: %c\n", a);
 
 
     // Initialize ACPI
-    //acpi_init();
+    acpi_init();
 
     // Initialize PCI
     //pci_init();
