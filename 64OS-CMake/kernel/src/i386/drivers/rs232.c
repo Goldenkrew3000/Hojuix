@@ -46,11 +46,11 @@ int rs232_port_decider(int port) {
 */
 int rs232_baudrate_decider(int baudrate) {
     if (baudrate == 38400) {
-        return 3;
+        return 0x03;
     } else if (baudrate == 57600) {
-        return 2;
+        return 0x02;
     } else if (baudrate == 115200) {
-        return 1;
+        return 0x01;
     } else {
         // Baudrate is invalid
         return 0;
@@ -70,7 +70,13 @@ int rs232_init(int port, long baudrate) {
 
     // Convert baudrate to divisor
     // NOTE: The UART controller has an internal clock of 115200 Hz
-    // TODO
+    int divisor = rs232_baudrate_decider(baudrate);
+    if (baudrate == 0) {
+        // Specified baudrate is not standard, abort initialization
+        return 2;
+    }
+
+    printf("GOt here!\n");
 
     // Actually initialize the serial port
     outb(hex_port + 1, 0x00); // Disable all interrupts
@@ -93,31 +99,16 @@ int rs232_init(int port, long baudrate) {
     return 0;
 }
 
-int rs232_is_transmit_empty(int port) {
-    // Convert port number to real port
-    int hex_port = rs232_port_decider(port);
-    if (port == 0) {
-        // Serial port does not exist
-        return 1;
-    }
-
+int rs232_is_transmit_empty(int hex_port) {
     return inb(hex_port + 5) & 0x20;
 }
 
-int rs232_write(int port, char character) {
-    // Convert port number to real port
-    int hex_port = rs232_port_decider(port);
-    if (port == 0) {
-        // Serial port does not exist
-        return 1;
-    }
-
+int rs232_write(int hex_port, char character) {
     // Wait for the transmit buffer to be empty
-    while (rs232_is_transmit_empty(1) == 0);
+    while (rs232_is_transmit_empty(hex_port) == 0);
 
     // Write to serial port
     outb(hex_port, character);
-
     return 0;
 }
 
@@ -130,11 +121,14 @@ int rs232_writeline(int port, char* string) {
     }
 
     // Fetch the size of the string, and write the string
-    for (int i = 0; i < strlen(string); i++) {
-        rs232_write(port, string[i]);
+    for (uint32_t i = 0; i < strlen(string); i++) {
+        rs232_write(hex_port, string[i]);
     }
+    
+    return 0;
 }
 
+/*
 int rs232_received(int port) {
     // Convert port number to real port
     int hex_port = rs232_port_decider(port);
@@ -158,6 +152,7 @@ char rs232_read(int port) {
 
     return inb(hex_port);
 }
+*/
 
 __attribute__((interrupt))
 void irq_rs232_port1_handler(void*) {

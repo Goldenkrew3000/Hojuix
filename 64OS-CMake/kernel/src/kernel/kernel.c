@@ -109,8 +109,6 @@ void kernel_entry(void) {
     // Initialize RS232
     int ret = rs232_init(1, 57600);
     rs232_writeline(1, "Hello world from RS232!\n");
-    char a = rs232_read(1);
-    printf("Char received: %c\n", a);
 
 
     // Initialize ACPI
