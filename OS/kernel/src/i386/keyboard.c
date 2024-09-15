@@ -20,6 +20,8 @@ bool scrolllock_toggle = false;
 bool numlock_toggle = false;
 uint8_t ledbyte = 0x00;
 
+char keyboard_buffer[256];
+
 char keyboard_scancode_conv(uint8_t scancode) {
     if (lshift_toggle) {
         for (int i = 0; layer1_scancodes[i].scancode != 0x00; i++) {
@@ -59,7 +61,42 @@ void irq_keyboard_handler(void*) {
     if (status & 0x01) {
         uint8_t scancode = inb(0x60);
 
+        if (wasSpecialInterrupt) {
+            // Key was a special key
+            if (scancode == 0xDB) {
+                // Left Super Key pressed
+                printf("Left Super Key pressed\n");
+            } else if (scancode == 0x48) {
+                // Arrow Key Up pressed
+                printf("Cursor up pressed\n");
+            } else if (scancode == 0x50) {
+                // Arrow Key Down pressed
+                printf("Cursor down pressed\n");
+            } else if (scancode == 0x4B) {
+                // Arrow Key Left pressed
+                printf("Cursor left pressed\n");
+            } else if (scancode == 0x4D) {
+                // Arrow Key Right pressed
+                printf("Cursor right pressed\n");
+            } else if (scancode == 0x49) {
+                // Page Up pressed
+                printf("Page up pressed\n");
+            } else if (scancode == 0x51) {
+                // Page Down pressed
+                printf("Page down pressed\n");
+            } else if (scancode == 0x47) {
+                // Home pressed
+                printf("Home pressed\n");
+            } else if (scancode == 0x4F) {
+                // End pressed
+                printf("End pressed\n");
+            } else if (scancode == 0x53) {
+                // Delete pressed
+                printf("Delete pressed\n");
+            }
 
+            wasSpecialInterrupt = false;
+        } else {
 
 
         if (scancode == 0x3A) {
@@ -101,46 +138,15 @@ void irq_keyboard_handler(void*) {
         } else if (scancode == 0x76) {
             // Escape key pressed
             printf("Escape key pressed\n");
-        }
-        
-
-
-
-        else if (scancode == 0xE0) {
+        } else if (scancode == 0xE0) {
+            // Special Key - Set bool for next keycode
             wasSpecialInterrupt = true;
-        }
-
-
-        else if (scancode == 0xDB) {
-            if (wasSpecialInterrupt) {
-                printf("Left Super Key pressed\n");
-                wasSpecialInterrupt = false;
-            }
-        }
-
-        
-        /*
-        else if () {
-            // Page Up pressed 특별
-        } else if () {
-            // Page Down pressed 특별
-        } else if () {
-            // Home pressed 특별
-        } else if () {
-            // End pressed 특별
-        } else if () {
-            // Delete pressed 특별
-        }*/ else {
+        } else {
             printf("%c", keyboard_scancode_conv(scancode));
         }
-        // 0xE0, 0xDB --> left GUI pressed (super key)
 
-        
+        }
     }
-
-    
-
-    
 
     // ACK the interrupt
     irq_handler(33);

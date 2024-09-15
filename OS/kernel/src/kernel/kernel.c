@@ -97,12 +97,11 @@ void kernel_entry(void) {
     pmmgr_init();
     pmmgr_print_bitmap();
 
-
+    // Initialize COM1 @ 115200bps
     rs232_init(1, 115200);
 
-
     // Initialize VMM
-    vmmgr_init();
+    //vmmgr_init();
     pmmgr_print_bitmap();
 
     // Enable interrupts
