@@ -2,7 +2,11 @@
 #define _IO_H
 #include <kernel/dt.h>
 
-unsigned char inb(unsigned short _port);
-void outb(unsigned short _port, unsigned char _data);
+unsigned char in8(unsigned short _port);
+void out8(unsigned short _port, unsigned char _data);
+uint16_t in16(unsigned short _port);
+void out16(unsigned short _port, uint16_t _data);
+uint32_t in32(unsigned short _port);
+void out32(unsigned short _port, uint32_t _data);
 
 #endif

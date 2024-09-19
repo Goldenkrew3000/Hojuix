@@ -113,10 +113,10 @@ void kernel_entry(void) {
 
 
     // Initialize ACPI
-    //acpi_init();
+    acpi_init();
 
     // Initialize PCI
-    //pci_init();
+    pci_init();
 
     // Drop into kernel mode shell
     shell_init();

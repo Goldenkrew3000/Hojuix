@@ -22,9 +22,9 @@ void irq_pit_timer_handler(void*) {
 void pit_timer_phase(int hz) {
     // Set what frequency the PIT timer runs at
     int divisor = 1193180 / hz;
-    outb(0x43, 0x36);
-    outb(0x40, divisor & 0xFF);
-    outb(0x40, divisor >> 8);
+    out8(0x43, 0x36);
+    out8(0x40, divisor & 0xFF);
+    out8(0x40, divisor >> 8);
 }
 
 void pit_timer_install() {

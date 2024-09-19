@@ -13,8 +13,9 @@
 // The only tables with 8 byte length signatures are the RSDP and XSDP
 */
 
+#define HHDT_OFFSET 0xFFFF800000000000
+
 // ACPI Variables
-uint64_t* hhdt_offset = (uint64_t*)0xFFFF800000000000;
 uint64_t* fadt_table_addr;
 uint64_t* madt_table_addr;
 
@@ -156,7 +157,7 @@ void acpi_init() {
 
 void acpi_handle_xsdt() {
     // Load the XSDT pointer from the XSDP into the XSDT Struct
-    uint64_t* xsdt_addr = (uint64_t*)xsdp->xsdt_addr + (uint64_t)hhdt_offset;
+    uint64_t* xsdt_addr = (uint64_t*)((uintptr_t)xsdp->xsdt_addr + HHDT_OFFSET);
     XSDT_t* xsdt = (XSDT_t*)xsdt_addr;
 
     // Check the checksum of the XSDT table
@@ -174,7 +175,7 @@ void acpi_handle_xsdt() {
 
     // Check the tables at the pointers for desired ACPI tables
     for (int i = 0; i < table_entries; i++) {
-        uint64_t* addr = (uint64_t*)table_addrs[i] + (uint64_t)hhdt_offset;
+        uint64_t* addr = (uint64_t*)((uintptr_t)table_addrs[i] + HHDT_OFFSET);
         ACPI_t* table = (ACPI_t*)addr;
         
         // Search for certain ACPI tables

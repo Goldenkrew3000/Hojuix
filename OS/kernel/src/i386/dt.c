@@ -220,26 +220,26 @@ void irq_handler(int int_no) {
 
     // If the IDT entry that was invoked was greater than 40 (IRQ 8-15), send an EOI to the slave controller
     if (int_no >= 40) {
-        outb(0xA0, 0x20);
+        out8(0xA0, 0x20);
     }
 
     // In either case, we need to send an EOI to the master interrupt controller
-    outb(0x20, 0x20);
+    out8(0x20, 0x20);
 }
 
 void irq_remap() {
     // Remap IRQ
     // Way more info at: https://github.com/jakeSteinburger/SpecOS/blob/main/sys/idt.c
-    outb(0x20, 0x11);
-    outb(0xA0, 0x11);
-    outb(0x21, 0x20);
-    outb(0xA1, 0x28);
-    outb(0x21, 0x04);
-    outb(0xA1, 0x02);
-    outb(0x21, 0x01);
-    outb(0xA1, 0x01);
-    outb(0x21, 0xFF); // Mask interrupts --> 0xFF
-    outb(0xA1, 0xFF); // Same here
+    out8(0x20, 0x11);
+    out8(0xA0, 0x11);
+    out8(0x21, 0x20);
+    out8(0xA1, 0x28);
+    out8(0x21, 0x04);
+    out8(0xA1, 0x02);
+    out8(0x21, 0x01);
+    out8(0xA1, 0x01);
+    out8(0x21, 0xFF); // Mask interrupts --> 0xFF
+    out8(0xA1, 0xFF); // Same here
 }
 
 void irq_init() {
@@ -276,7 +276,7 @@ void irq_init() {
     //outb(0x21, 0x00);
 
     // Send the IRQ Mask
-    outb(0x21, irq_mask);
+    out8(0x21, irq_mask);
     
 }
 

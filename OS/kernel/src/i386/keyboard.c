@@ -57,9 +57,9 @@ char keyboard_scancode_conv(uint8_t scancode) {
 // PS/2 Keyboard IRQ Handler
 __attribute__((interrupt))
 void irq_keyboard_handler(void*) {
-    unsigned char status = inb(0x64);
+    unsigned char status = in8(0x64);
     if (status & 0x01) {
-        uint8_t scancode = inb(0x60);
+        uint8_t scancode = in8(0x60);
 
         if (wasSpecialInterrupt) {
             // Key was a special key
@@ -167,8 +167,8 @@ void keyboard_capslock() {
         ledbyte ^= (1 << 2);
 
         // Toggle capslock light
-        outb(0x60, 0xED);
-        outb(0x60, ledbyte);
+        out8(0x60, 0xED);
+        out8(0x60, ledbyte);
     } else {
         // Turn on capslock
         capslock_toggle = true;
@@ -177,8 +177,8 @@ void keyboard_capslock() {
         ledbyte ^= (1 << 2);
 
         // Turn on capslock light
-        outb(0x60, 0xED);
-        outb(0x60, ledbyte);
+        out8(0x60, 0xED);
+        out8(0x60, ledbyte);
     }
 }
 
@@ -191,8 +191,8 @@ void keyboard_scrolllock() {
         ledbyte ^= (1 << 0);
 
         // Turn off scroll lock light
-        outb(0x60, 0xED);
-        outb(0x60, ledbyte);
+        out8(0x60, 0xED);
+        out8(0x60, ledbyte);
     } else {
         // Turn on scroll lock
         scrolllock_toggle = true;
@@ -201,8 +201,8 @@ void keyboard_scrolllock() {
         ledbyte ^= (1 << 0);
 
         // Turn on scroll lock light
-        outb(0x60, 0xED);
-        outb(0x60, ledbyte);
+        out8(0x60, 0xED);
+        out8(0x60, ledbyte);
     }
 }
 
@@ -215,8 +215,8 @@ void keyboard_numlock() {
         ledbyte ^= (1 << 1);
 
         // Turn off numlock light
-        outb(0x60, 0xED);
-        outb(0x60, ledbyte);
+        out8(0x60, 0xED);
+        out8(0x60, ledbyte);
     } else {
         // Turn on numlock
         numlock_toggle = true;
@@ -225,7 +225,7 @@ void keyboard_numlock() {
         ledbyte ^= (1 << 1);
 
         // Turn on numlock light
-        outb(0x60, 0xED);
-        outb(0x60, ledbyte);
+        out8(0x60, 0xED);
+        out8(0x60, ledbyte);
     }
 }

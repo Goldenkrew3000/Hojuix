@@ -77,28 +77,28 @@ int rs232_init(int port, long baudrate) {
     }
 
     // Actually initialize the serial port
-    outb(hex_port + 1, 0x00); // Disable all interrupts
-    outb(hex_port + 3, 0x80); // Enable DLAB
-    outb(hex_port + 0, 0x02); // Set divisor to 2 (lo byte) 57600 baud
-    outb(hex_port + 1, 0x00); // (hi byte)
-    outb(hex_port + 3, 0x03); // 8 bits, no parity, 1 stop bit (8n1)
-    outb(hex_port + 2, 0xC7); // Enable FIFO
-    outb(hex_port + 4, 0x0B); // IRQs Enabled, RTS/DSR set
+    out8(hex_port + 1, 0x00); // Disable all interrupts
+    out8(hex_port + 3, 0x80); // Enable DLAB
+    out8(hex_port + 0, 0x02); // Set divisor to 2 (lo byte) 57600 baud
+    out8(hex_port + 1, 0x00); // (hi byte)
+    out8(hex_port + 3, 0x03); // 8 bits, no parity, 1 stop bit (8n1)
+    out8(hex_port + 2, 0xC7); // Enable FIFO
+    out8(hex_port + 4, 0x0B); // IRQs Enabled, RTS/DSR set
     
     // Test the serial chip
-    outb(hex_port + 4, 0x1E); // Set in loopback mode (To test the serial chip)
-    outb(hex_port + 0, 0xAE); // Send byte 0xAE for test
-    if (inb(hex_port + 0) != 0xAE) {
+    out8(hex_port + 4, 0x1E); // Set in loopback mode (To test the serial chip)
+    out8(hex_port + 0, 0xAE); // Send byte 0xAE for test
+    if (in8(hex_port + 0) != 0xAE) {
         return 2;
     }
 
     // If serial chip is not faulty, set to normal operation mode
-    outb(hex_port + 4, 0x0F);
+    out8(hex_port + 4, 0x0F);
     return 0;
 }
 
 int rs232_is_transmit_empty(int hex_port) {
-    return inb(hex_port + 5) & 0x20;
+    return in8(hex_port + 5) & 0x20;
 }
 
 int rs232_write(int hex_port, char character) {
@@ -106,7 +106,7 @@ int rs232_write(int hex_port, char character) {
     while (rs232_is_transmit_empty(hex_port) == 0);
 
     // Write to serial port
-    outb(hex_port, character);
+    out8(hex_port, character);
     return 0;
 }
 
