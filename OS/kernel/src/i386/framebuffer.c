@@ -88,10 +88,10 @@ void framebuffer_putchar(char character) {
             ssfn_dst.y += 16;
         }
     } else {
-        if (ssfn_dst.x > (9 * 120)) {
-            ssfn_dst.x = 0;
-            ssfn_dst.y += 16;
-        }
+        //if (ssfn_dst.x > (9 * 120)) {
+        //    ssfn_dst.x = 0;
+        //    ssfn_dst.y += 16;
+        //}
         ssfn_putc(character);
     }
 }

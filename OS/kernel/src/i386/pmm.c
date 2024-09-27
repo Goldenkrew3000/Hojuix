@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <kernel/pmm.h>
+#include <kernel/vmm.h>
 #include <kernel_ext/limine.h>
 
 // Created by loosely following the tutorial from: https://github.com/Menotdan/OSdev-tutorial/blob/master/chapters/4/chapter.md
@@ -190,3 +191,18 @@ void pmmgr_print_bitmap() {
     printf("Free Bitmap Pages: %lld\n", pmmgr_free_bitmap_pages);
 }
 
+// Part of the VMMGR that requires the limine memmap
+#define KERNEL_PFLAG_PRESENT 0b1
+#define KERNEL_PFLAG_WRITE   0b10
+#define HHDM_OFFSET 0xFFFF800000000000
+
+void vmmgr_map_memory(uint64_t pml4[]) {
+    uint64_t entry_count = memmap_request.response->entry_count;
+    struct limine_memmap_entry **entries = memmap_request.response->entries;
+    for (uint64_t i = 0; i < entry_count; i++) {
+        struct limine_memmap_entry *entry = entries[i];
+        if (entry->type == LIMINE_MEMMAP_USABLE || entry->type == LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE) {
+            vmmgr_map_page(pml4, entry->base + HHDM_OFFSET, entry->base, entry->length / 4096, KERNEL_PFLAG_PRESENT | KERNEL_PFLAG_WRITE);
+        }
+    }
+}

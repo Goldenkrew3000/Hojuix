@@ -23,6 +23,8 @@ SECTIONS
     /* that is the beginning of the region. */
     . = 0xffffffff80000000;
 
+    KERNEL_START_SYM = .;
+
     .text : {
         *(.text .text.*)
     } :text
@@ -36,6 +38,7 @@ SECTIONS
 
     /* Move to the next memory page for .data */
     . = ALIGN(CONSTANT(MAXPAGESIZE));
+    KERNEL_WRITE_SYM = .;
 
     .data : {
         *(.data .data.*)
@@ -56,11 +59,12 @@ SECTIONS
         *(COMMON)
     } :data
 
+    . += CONSTANT(MAXPAGESIZE);
+    KERNEL_END_SYM = .;
+
     /* Discard .note.* and .eh_frame* since they may cause issues on some hosts. */
     /DISCARD/ : {
         *(.eh_frame*)
         *(.note .note.*)
     }
-
-    KERNEL_END_SYMBOL = .;
 }

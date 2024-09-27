@@ -101,7 +101,7 @@ void kernel_entry(void) {
     rs232_init(1, 115200);
 
     // Initialize VMM
-    //vmmgr_init();
+    //vmmgr_init(); // Still completely non functional
     pmmgr_print_bitmap();
 
     // Enable interrupts
