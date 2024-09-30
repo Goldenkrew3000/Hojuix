@@ -1,25 +1,26 @@
 # 호주ix - A 64bit hobbyist OSDev project
 
-# NOTICE
-Paging is too complicated, and I have given up on it for now. OSDev continues, just not paging/vmm...
+# Sub-Projects
+- OS - Hojuix for x86_64 (The main project)
+- PiOS - Experiments with OSDev on AArch64 (Specifically for Raspberry Pi 3/4)
 
 # Notes
 - Libk is currently built separate from the 64 bit kernel, but does not have to be moved
-- Probably going to port the build system to CMake in the future
+- Going to port the Build System to CMake in the future
 
 # Done
-- GDT
-- IDT
+- GDT / IDT / ISR
 - Keyboard (Functional but needs more work)
-- Framebuffer (Scrolling needs improving, currently just using memcpy)
+- Framebuffer (Not double-buffered, yet)
 - PIT Timer (@ 100hz)
 - Physical Memory Manager
+- Virtual Memory Manager (4 Level Paging)
+- Basic RS232 Driver
 
 # Todo
-- Virtual Memory Management / Paging
-- Serial Driver
 - Completed Keyboard Driver
-- Mouse Driver (Not planning to do anything with it, but it's there if I want to)
+- PS/2 Mouse Driver (Not planning to do anything with it currently, but want support)
+- Massive overhaul of GDT / IDT / ISR Code (And implement a TSS)
 
 # Personal Resources
 ## C UINT Sizes
