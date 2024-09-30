@@ -7,3 +7,7 @@ void* memcpy(void* restrict dstptr, const void* restrict srcptr, size_t size) {
 		dst[i] = src[i];
 	return dstptr;
 }
+
+void kern_memcpy(char* dest, const char* from, size_t n) {
+    asm ("rep movsb" : : "D" (dest), "S" (from), "c" (n) : "memory");
+}

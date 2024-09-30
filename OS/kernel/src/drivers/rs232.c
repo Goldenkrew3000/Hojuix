@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <kernel/io.h>
+#include <kernel/i386/io.h>
 #include <kernel/drivers/rs232.h>
 
 // TODO: Add a check to make sure that the UART port is initialized before trying to read / write to it. (Just probably a boolean for each)

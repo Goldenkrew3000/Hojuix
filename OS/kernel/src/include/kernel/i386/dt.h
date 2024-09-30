@@ -5,6 +5,7 @@
 // GDT
 */
 
+/*
 struct GDTEntry {
     uint16_t limit1;
     uint16_t base1;
@@ -15,11 +16,15 @@ struct GDTEntry {
     uint8_t base3;
 } __attribute__((packed));
 
+//struct gdt_t {
+
+//} __attribute__((packed));
+
 struct GDTPtr {
     uint16_t size;
     uint64_t offset;
 } __attribute__((packed));
-
+*/
 struct GDTEntry gdt_assembleEntry(uint8_t accessByte, uint8_t flags, uint32_t limit);
 void gdt_setGate(int gateID, uint8_t accessByte, uint8_t flags, uint32_t limit);
 void loadGDT();

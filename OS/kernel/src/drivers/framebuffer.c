@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <kernel/framebuffer.h>
+#include <kernel/drivers/framebuffer.h>
 #include <kernel_ext/limine.h>
 
 #define SSFN_CONSOLEBITMAP_TRUECOLOR // Simple implementation

@@ -1,11 +1,23 @@
 #ifndef _PCI_H
 #define _PCI_H
 
+// PCI Device Table용
+struct t_pci_device {
+    uint16_t vendor_id; // Vendor ID
+    uint16_t device_id; // Device ID
+    uint16_t class_id; // Class ID
+    uint8_t bus; // Location on PCI Bus (0 - 255)
+    uint8_t slot; // Location on bus (0 - 31)
+    uint8_t function; // Location on slot (0 - 7)
+} __attribute__((packed));
+
+// PCI Device Type용
 typedef struct {
     uint16_t classCode;
     char* className;
 } t_pci_class;
 
+// PCI Device Type Full Name용
 typedef struct {
     uint16_t vendor;
     uint16_t device;

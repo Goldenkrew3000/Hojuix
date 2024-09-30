@@ -3,10 +3,10 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <kernel/dt.h>
-#include <kernel/io.h>
-#include <kernel/keyboard.h>
-#include <kernel/framebuffer.h>
+#include <kernel/i386/dt.h>
+#include <kernel/i386/io.h>
+#include <kernel/drivers/ps2_keyboard.h>
+#include <kernel/drivers/framebuffer.h>
 
 bool wasSpecialInterrupt = false;
 

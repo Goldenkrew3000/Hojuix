@@ -195,8 +195,8 @@ void acpi_handle_xsdt() {
     acpi_handle_fadt();
 }
 
-#include <kernel/io.h>
-#include <kernel/timer.h>
+#include <kernel/i386/io.h>
+#include <kernel/drivers/pit_timer.h>
 
 void acpi_handle_fadt() {
     // Load the FADT pointer into the FADT struct

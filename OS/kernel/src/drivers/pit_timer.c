@@ -1,8 +1,8 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <kernel/dt.h>
-#include <kernel/io.h>
+#include <kernel/i386/dt.h>
+#include <kernel/i386/io.h>
 
 long PIT_timer_ticks = 0;
 

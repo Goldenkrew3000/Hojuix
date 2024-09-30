@@ -4,11 +4,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <kernel/io.h>
-#include <kernel/dt.h>
-#include <kernel/keyboard.h>
-#include <kernel/timer.h>
-
+#include <kernel/i386/io.h>
+#include <kernel/i386/dt.h>
+#include <kernel/drivers/ps2_keyboard.h>
+#include <kernel/drivers/pit_timer.h>
 #include <kernel/drivers/rs232.h>
 
 /*
@@ -16,7 +15,7 @@
 */
 
 // MASSIVE Thank You to SpecOS for helping me with the GDT and IDT code!!
-
+/*
 struct GDTEntry gdt[5];
 
 struct GDTEntry gdt_assembleEntry(uint8_t accessByte, uint8_t flags, uint32_t limit) {
@@ -33,14 +32,23 @@ void gdt_setGate(int gateID, uint8_t accessByte, uint8_t flags, uint32_t limit) 
     gdt[gateID] = gdt_assembleEntry(accessByte, flags, limit);
 }
 
+
+
+
+
+
+
+
+
 __attribute__((noinline))
 void loadGDT() {
+    printf("[GDT] Creating...\n");
     struct GDTPtr gdt_ptr;
     gdt_ptr.size = (sizeof(struct GDTEntry) * 5) - 1;
     gdt_ptr.offset = (uint64_t) &gdt;
     
-    asm volatile("lgdt (%0)" : : "r" (&gdt_ptr));
-    asm volatile("nop"); // General faults without keeping a little wait before continuing on
+    asm("lgdt (%0)" : : "r" (&gdt_ptr));
+    //asm volatile("nop"); // General faults without keeping a little wait before continuing on
     asm volatile("push $0x08; \
                   lea .reload_CS(%%rip), %%rax; \
                   push %%rax; \
@@ -62,7 +70,7 @@ void gdt_init() {
     gdt_setGate(4, 0xF2, 0xC, 0xFFFFF); // User Mode Data segment
     // TODO TSS
     loadGDT();
-}
+}*/
 
 /*
 // IDT
