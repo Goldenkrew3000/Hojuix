@@ -1,22 +1,36 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <kernel/i386/dt.h>
+#include <kernel.h>
+#include <kernel/i386/idt.h>
+#include <kernel/i386/irq.h>
 #include <kernel/i386/io.h>
+#include <kernel/drivers/pit_timer.h>
 
 long PIT_timer_ticks = 0;
+
+void pit_timer_init() {
+    // Set the ISR Interrupt Handler Function
+    idt_assemble_entry(32, &irq_pit_timer_handler, 0x8E, (struct idt_entry_t*)kerndata.idtr.offset);
+
+    // Unmask the PIT Timer IRQ (IRQ 0)
+    irq_unmask(0);
+
+    // Set timer to 100hz
+    pit_timer_phase(100);
+}
 
 __attribute__((interrupt))
 void irq_pit_timer_handler(void*) {
     // PIT Timer runs at 18.222Hz (By default)
     PIT_timer_ticks++;
 
-    /*if (PIT_timer_ticks % 100 == 0) {
+    if (PIT_timer_ticks % 100 == 0) {
         printf("TIME %d\n", PIT_timer_ticks);
-    }*/
+    }
 
     // ACK the interrupt
-    irq_handler(32);
+    irq_ack(0);
 }
 
 void pit_timer_phase(int hz) {
@@ -25,11 +39,6 @@ void pit_timer_phase(int hz) {
     out8(0x43, 0x36);
     out8(0x40, divisor & 0xFF);
     out8(0x40, divisor >> 8);
-}
-
-void pit_timer_install() {
-    // Set timer to 100hz
-    pit_timer_phase(100);
 }
 
 void timer_wait(long milliseconds) {

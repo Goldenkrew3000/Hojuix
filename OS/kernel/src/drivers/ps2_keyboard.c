@@ -3,8 +3,10 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <kernel/i386/dt.h>
+#include <kernel.h>
 #include <kernel/i386/io.h>
+#include <kernel/i386/idt.h>
+#include <kernel/i386/irq.h>
 #include <kernel/drivers/ps2_keyboard.h>
 #include <kernel/drivers/framebuffer.h>
 
@@ -52,6 +54,15 @@ char keyboard_scancode_conv(uint8_t scancode) {
         }
         return 0;
     }
+}
+
+// PS/2 Keyboard IRQ Init
+void ps2_keyboard_init() {
+    // Set the ISR Interrupt Handler Function
+    idt_assemble_entry(33, &irq_keyboard_handler, 0x8E, (struct idt_entry_t*)kerndata.idtr.offset);
+
+    // Unmask the PS/2 Keyboard IRQ (IRQ 1)
+    irq_unmask(1);
 }
 
 // PS/2 Keyboard IRQ Handler
@@ -149,14 +160,14 @@ void irq_keyboard_handler(void*) {
     }
 
     // ACK the interrupt
-    irq_handler(33);
+    irq_ack(1);
 }
 
 
 
 
 
-
+// TODO Cleanup this bitshifting code with a WAY better implementation (Best shown in the IRQ handler)
 
 void keyboard_capslock() {
     if (capslock_toggle) {

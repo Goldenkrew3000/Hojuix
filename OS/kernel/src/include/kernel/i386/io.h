@@ -1,6 +1,5 @@
 #ifndef _IO_H
 #define _IO_H
-#include <kernel/i386/dt.h>
 
 unsigned char in8(unsigned short _port);
 void out8(unsigned short _port, unsigned char _data);

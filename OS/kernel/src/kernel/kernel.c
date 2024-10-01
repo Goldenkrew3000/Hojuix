@@ -7,10 +7,13 @@
 #include <kernel.h>
 
 #include <kernel/i386/gdt.h>
+#include <kernel/i386/idt.h>
+#include <kernel/i386/irq.h>
+#include <kernel/drivers/ps2_keyboard.h>
 
-#include <kernel/i386/dt.h>
 #include <kernel/i386/io.h>
 #include <kernel/drivers/pit_timer.h>
+
 #include <kernel/drivers/framebuffer.h>
 #include <kernel/drivers/acpi.h>
 #include <kernel/drivers/pci.h>
@@ -103,42 +106,24 @@ void kernel_entry(void) {
     printf("HOJUIX 0.3A x86_64 - Build Time: %s ", __DATE__);
     printf("%s\n", __TIME__);
 
-    // Print CPUID
-    //print_cpuid();
-
-    // Initialize Memory Managers
-    //pmmgr_init();
-    //vmmgr_init();
-    //vmmgr_switch_structures();
+    // Initialize the Memory Managers
+    pmmgr_init();
+    vmmgr_init();
+    vmmgr_switch_structures();
 
     // Initialize GDT
-    printf("Initializing GDT...");
-    //gdt_init();
+    tss_init();
     gdt_init();
-    printf(" OK\n");
 
     // Initialize IDT
-    printf("Initializing IDT...");
     idt_init();
-    printf(" OK\n");
 
     // Initialize IRQ
-    printf("Initializing IRQ...");
     irq_init();
-    printf(" OK\n");
-     
-    // Print display info to console
-    printf("Framebuffer Size: %dx", framebuffer->width);
-    printf("%d\n", framebuffer->height);
 
-    // Initialze PMM
-    //pmmgr_init();
-    //vmmgr_init();
-    printf("Kern CR3: %p\n", kerndata.cr3);
-    //printf("Switching\n");
-    //switch_page_structures();
-    //kernheap_init();
-    //pmmgr_print_bitmap();
+    // Print display info to console
+    //printf("Framebuffer Size: %dx", framebuffer->width);
+    //printf("%d\n", framebuffer->height);
 
     // Initialize COM1 @ 115200bps
     //rs232_init(1, 115200);
@@ -153,13 +138,21 @@ void kernel_entry(void) {
     // Initialize RS232
     //int ret = rs232_init(1, 57600);
     //rs232_writeline(1, "Hello world from RS232!\n");
+    //
+    
+    // Initialize the PIT Timer TODO Not functional for ...some... reason
+    //pit_timer_init();
+
+    // Initialize PS2 Keyboard
+    ps2_keyboard_init();
+
 
 
     // Initialize ACPI
-    acpi_init();
+    //acpi_init();
 
     // Initialize PCI
-    pci_init();
+    //pci_init();
 
     // WORKING - Attempt to retrieve a pci device from the pci device table
     //struct t_pci_device *pci_device_a = (struct t_pci_device*)(kerndata.pci_devices_addr + (uint64_t)(0x9 * 1));

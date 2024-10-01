@@ -20,7 +20,6 @@ void vmmgr_init() {
     uint64_t pml4_virt = ((uint64_t)pmmgr_kmalloc(1)) + kerndata.hhdm_offset;
     kern_memset((uint8_t*)pml4_virt, 0, 4096);
     vmmgr_map_all((uint64_t*)pml4_virt);
-    printf("mapped all\n");
     kerndata.cr3 = pml4_virt - kerndata.hhdm_offset;
 }
 

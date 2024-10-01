@@ -7,13 +7,12 @@
 #include <kernel.h>
 #include <kernel/i386/gdt.h>
 #include <kernel/memory/pmmgr.h>
+#include <kernel/memory/vmmgr.h>
 
 struct gdtr_t gdtr;
 struct tss_t tss;
 
 void gdt_init() {
-    printf("[GDT] Assembling...\n");
-
     // Allocate a block from memory for the GDT / TSS
     uint64_t* gdt_content = (uint64_t*)((uint64_t)pmmgr_kmalloc(1) + ((uint64_t)kerndata.hhdm_offset));
 
@@ -32,7 +31,6 @@ void gdt_init() {
     gdtr.offset = (uint64_t)gdt_content;
 
     // Actually utilize the newly created structures
-    printf("[GDT] Far jumping...\n");
     asm("lgdt (%0)" : : "r" (&gdtr)); // Load the new GDT
     asm volatile("push $0x08; \
                   lea .gdt_farjmp(%%rip), %%rax; \
@@ -48,6 +46,11 @@ void gdt_init() {
     asm volatile("mov $0x28, %%ax; \
                   ltr %%ax" : : : "eax"); // Load the TSS
     printf("[GDT] Initialized.\n");
+}
+
+void tss_init() {
+    tss.rsp0 = KERNEL_STACK_PTR;
+    printf("[TSS] Initialized.\n");
 }
 
 uint64_t gdt_assemble_entry(uint64_t base, uint64_t limit, uint64_t access, uint64_t flags) {
@@ -70,8 +73,6 @@ uint64_t gdt_assemble_entry(uint64_t base, uint64_t limit, uint64_t access, uint
     gdt_entry |= access << 40;
     gdt_entry |= flags << 52;
     
-    printf("GDT current: %p\n", gdt_entry);
-
     return gdt_entry;
 }
 

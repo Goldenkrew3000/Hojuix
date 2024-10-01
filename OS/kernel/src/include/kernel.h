@@ -1,6 +1,7 @@
 #ifndef _KERNEL_H
 #define _KERNEL_H
 #include <kernel_ext/limine.h>
+#include <kernel/i386/idt.h>
 #include <kernel/drivers/pci.h>
 
 typedef struct {
@@ -12,6 +13,7 @@ typedef struct {
     uint64_t hhdm_offset;
 
     // GDT / IDT / TSS
+    struct idtr_t idtr;
 
     // ACPI Addresses
 

@@ -185,6 +185,7 @@ char keyboard_scancode_conv(uint8_t scancode);
 void keyboard_capslock();
 void keyboard_scrolllock();
 void keyboard_numlock();
+void ps2_keyboard_init();
 void irq_keyboard_handler(void*);
 
 #endif

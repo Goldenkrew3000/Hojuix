@@ -4,7 +4,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <kernel.h>
 #include <kernel/i386/io.h>
+#include <kernel/i386/idt.h>
+#include <kernel/i386/irq.h>
 #include <kernel/drivers/rs232.h>
 
 // TODO: Add a check to make sure that the UART port is initialized before trying to read / write to it. (Just probably a boolean for each)
@@ -158,7 +161,7 @@ void irq_rs232_port1_handler(void*) {
     printf("Data received on Serial Port 1\n");
     
     // ACK the interrupt
-    irq_handler(36);
+    irq_ack(4);
 }
 
 __attribute__((interrupt))
@@ -167,5 +170,5 @@ void irq_rs232_port2_handler(void*) {
     printf("Data received on Serial Port 2\n");
     
     // ACK the interrupt
-    irq_handler(35);
+    irq_ack(3);
 }

@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 #if defined(__is_libk)
-#include <kernel/framebuffer.h>
+#include <kernel/drivers/framebuffer.h>
 #endif
 
 int putchar(int ic) {

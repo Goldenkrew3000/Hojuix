@@ -2,12 +2,13 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <kernel/i386/io.h>
-#include <kernel/i386/dt.h>
+
+// TODO Refactor to look more sensible tbh
 
 unsigned char in8(unsigned short _port) {
-    unsigned char rv;
-    asm volatile("inb %1, %0" : "=a" (rv) : "dN" (_port));
-    return rv;
+    unsigned char ret;
+    asm volatile("inb %1, %0" : "=a" (ret) : "dN" (_port));
+    return ret;
 }
 
 void out8(unsigned short _port, unsigned char _data) {

@@ -1,132 +1,177 @@
+#include <stddef.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <kernel.h>
 #include <kernel/memory/pmmgr.h>
+#include <kernel/memory/vmmgr.h>
 #include <kernel_ext/limine.h>
 
-/*
- * Tbh I have mostly no idea what is going on here.
- * Most of this code is from PotatOS.
- * I have been stuck on non-functional paging for over a month.
- * It works, and that's all that matters.
- * Why is memory management / paging so fucking fragile...
- */
+// Limine Memory Map Variables
+uint64_t total_usable_mem = 0;
+uint64_t total_reserved_mem = 0;
+uint64_t total_mem = 0;
+uint64_t* hhdm_offset = (uint64_t*)0xFFFF800000000000; // Hardcoded due to it always being the same
 
-void pmmgr_init() {
-    printf("[PMMGR] Initializing...\n");
+// PMM Variables
+uint64_t pmmgr_total_bitmap_pages = 0;
+uint64_t pmmgr_used_bitmap_pages = 0;
+uint64_t pmmgr_free_bitmap_pages = 0;
+uint64_t pmmgr_bitmap_bytes = 0;
+uint8_t* bitmap = (void*) 0;
 
-    // Fetch Limine Memory Map
-    struct limine_memmap_entry *memmap_entries = *kerndata.memmap.entries;
-    uint64_t memmap_entry_count = kerndata.memmap.entry_count;
+void pmmgr_init() { // Feed mem_size ALL (All types) memory, in bytes, and bitmap_addr 0x20C000
+    // Fetch memory map info from limine
+    uint64_t entry_count = kerndata.memmap.entry_count;
+    struct limine_memmap_entry **entries = kerndata.memmap.entries;
+    for (uint64_t i = 0; i < entry_count; i++) {
+        struct limine_memmap_entry *entry = entries[i];
+        //printf("Mem Region %llu: ", i);
+        //printf("Base: 0x%lx, ", entry->base);
+        //printf("Length: 0x%lx, ", entry->length);
+        //printf("Type: %u\n", entry->type);
 
-    // Initialize Bitmap
-    for (size_t i = 0; i < memmap_entry_count; i++) {
-        pmmgr_init_single_bitmap(memmap_entries[i]);
-    }
-
-    kerndata.last_freed_section = -1;
-    kerndata.last_freed_page = -1;
-}
-
-void pmmgr_init_single_bitmap(struct limine_memmap_entry memmap_entry) {
-    // Check whether the current memory map entry is usable
-    if (memmap_entry.type != LIMINE_MEMMAP_USABLE) {
-        return;
-    }
-
-    // All memory is usable at this point, completely zero it out
-    kern_memset((uint8_t*)memmap_entry.base + kerndata.hhdm_offset, 0, memmap_entry.length);
-    //kern_memset_word((uint8_t*)memmap_entry.base + kerndata.hhdm_offset, 0xABCDABCD, memmap_entry.length);
-}
-
-uint64_t pmmgr_get_bitmap_reserved(struct limine_memmap_entry memmap_entry) {
-    uint64_t bitmap_reserved = 0;
-    uint32_t n = 1;
-    while (true) {
-        if (n * 4096 * 8 > (memmap_entry.length / 4096) - n) {
-            bitmap_reserved = n * 4096;
-            break;
+        total_mem += entry->length;
+        if (entry->type == LIMINE_MEMMAP_USABLE || entry->type == LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE) {
+            total_usable_mem += entry->length;
+        } else {
+            total_reserved_mem += entry->length;
         }
     }
-    return bitmap_reserved;
-}
 
-void* pmmgr_kmalloc(uint64_t num_pages) {
-    if (num_pages < 1) {
-        printf("[PMMGR] Cannot allocate less than 1 page! Halting.\n");
-        abort();
-    }
+    // Print basic memory info to console
+    printf("Total Memory: %lld mb (", total_mem / 1024 / 1024);
+    printf("%lld mb usable / ", total_usable_mem / 1024 / 1024);
+    printf("%lld mb reserved)\n", total_reserved_mem / 1024 / 1024);
+    //printf("HHDM offset: %lx\n", hhdm_offset);
+    
+    // Calculate bitmap page count and size
+    pmmgr_total_bitmap_pages = (total_mem + 0x1000 - 1) / 0x1000;
+    pmmgr_bitmap_bytes = (pmmgr_total_bitmap_pages + 8 - 1) / 8; // Dividing by 8 because 8 pages per byte
 
-    struct limine_memmap_entry *memmap_entries = *kerndata.memmap.entries;
-    if (kerndata.last_freed_page != -1 && num_pages < kerndata.last_freed_num_pages) {
-        pmmgr_allocate_pages(kerndata.last_freed_section, kerndata.last_freed_page, num_pages);
-        uint64_t bitmap_reserved = pmmgr_get_bitmap_reserved(memmap_entries[kerndata.last_freed_section]);
-        return (void*) (memmap_entries[kerndata.last_freed_section].base + (kerndata.last_freed_page * 4096) + bitmap_reserved);
-    }
-
-    for (size_t entry = 0; entry < kerndata.memmap.entry_count; entry++) {
-        // look through this entry for avaliable pages
-        if (memmap_entries[entry].type != LIMINE_MEMMAP_USABLE) continue;
-        uint64_t bitmap_reserved = pmmgr_get_bitmap_reserved(memmap_entries[entry]);
-        uint64_t max_bitmap_bytes = ((memmap_entries[entry].length - bitmap_reserved) / 4096) / 8;
-        for (size_t bitmap_byte = 0; bitmap_byte < max_bitmap_bytes; bitmap_byte++) {
-            for (uint8_t bitmap_bit = 0; bitmap_bit < 8; bitmap_bit++) {
-                if (pmmgr_check_pages_avaliable(entry, bitmap_bit + (bitmap_byte * 8), num_pages, bitmap_reserved)) {
-                    pmmgr_allocate_pages(entry, bitmap_bit + (bitmap_byte * 8), num_pages);
-                    uintptr_t addr = (memmap_entries[entry].base + ((bitmap_bit + (bitmap_byte * 8)) * 4096) + bitmap_reserved);
-                    kern_memset((uint8_t*) (addr + kerndata.hhdm_offset), 0, num_pages * 4096);
-                    return (void*) addr;
-                }
+    // Iterate over the memory map to find a spot large enough to store the bitmap
+    for (uint64_t i = 0; i < entry_count; i++) {
+        struct limine_memmap_entry *entry = entries[i];
+        if (entry->type == LIMINE_MEMMAP_USABLE || entry->type == LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE) {
+            if (entry->length >= pmmgr_bitmap_bytes) {
+                // Found a space large enough
+                //printf("Bitmap Location: 0x%lx - ", entry->base);
+                //printf("0x%lx\n", entry->base + pmmgr_bitmap_bytes);
+                bitmap = (void*) (entry->base + (uint64_t)hhdm_offset);
+                break;
             }
         }
     }
 
-    // No physical memory left, halt
-    printf("[PMMGR] No more physical memory available! Halting.\n");
+    if (!bitmap) {
+        printf("Could not find a space large enough to store bitmap.");
+        abort();
+    }
+
+    // Set the whole bitmap to used (All 1's / 0xFF)
+    memset(bitmap, 0xFF, pmmgr_bitmap_bytes);
+    pmmgr_used_bitmap_pages = pmmgr_total_bitmap_pages;
+
+    // Set the bitmap up according to the limine memory map (blacklist reserved memory etc) TODO CHECK
+    for (uint64_t i = 0; i < entry_count; i++) {
+        struct limine_memmap_entry *entry = entries[i];
+        if (entry->type == LIMINE_MEMMAP_USABLE || entry->type == LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE) {
+            
+            if (entry->base == (uint64_t)bitmap - (uint64_t)hhdm_offset) {
+                // This is where the bitmap is stored, do not want to mark the bitmap as free memory
+                uint64_t bitmap_end_byte = (uint64_t)bitmap + pmmgr_bitmap_bytes;
+                uint64_t bitmap_end_page = ((bitmap_end_byte + 0x1000 - 1) / 0x1000) * 0x1000;
+                uint64_t entry_end_page = (entry->base + entry->length) / 0x1000; // The tutorial says usable pages are guaranteed to be page aligned in stivale. Usable and bootloader reclaimable are also in limine.
+
+                // Continue until we have freed all pages
+                for (uint64_t page = bitmap_end_page; page < entry_end_page; page++) {
+                    pmmgr_set_free(page);
+                }
+            } else {
+                uint64_t page = entry->base / 0x1000;
+                uint64_t count = entry->length / 0x1000;
+
+                for (uint64_t j = 0; j < count; j++) {
+                    pmmgr_set_free(page + j);
+                }
+            }
+        }
+    }
+}
+
+void pmmgr_set_used(uint64_t page) {
+    uint64_t byte = page / 8;
+    uint64_t bit = page % 8;
+    bitmap[byte] |= (1 << bit);
+    pmmgr_used_bitmap_pages++;
+    pmmgr_free_bitmap_pages--;
+}
+
+void pmmgr_set_free(uint64_t page) {
+    uint64_t byte = page / 8;
+    uint64_t bit = page % 8;
+    bitmap[byte] &= ~(1 << bit);
+    pmmgr_used_bitmap_pages--;
+    pmmgr_free_bitmap_pages++;
+}
+
+uint8_t pmmgr_is_page_used(uint64_t page) {
+    uint64_t byte = page / 8;
+    uint64_t bit = page % 8;
+    return (bitmap[byte] & (1 << bit)) >> bit;
+}
+
+uint64_t pmmgr_find_free_pages(uint64_t size) {
+    uint64_t needed_pages = (size + 0x1000 - 1) / 0x1000;
+    uint64_t found_pages = 0;
+    uint64_t current_page = 0;
+
+    for (uint64_t i = 0; i < pmmgr_total_bitmap_pages; i++) {
+        if (!pmmgr_is_page_used(i)) {
+            if (found_pages == 0) {
+                current_page = i;
+            }
+            found_pages++;
+        } else {
+            found_pages = 0;
+        }
+
+        if (found_pages >= needed_pages) {
+            return current_page;
+        }
+    }
+
+    printf("Failed to find free memory.\n");
     abort();
 }
 
-bool pmmgr_check_pages_avaliable(uint64_t section_index, uint64_t page_frame_number, uint64_t num_pages, uint64_t bitmap_reserved) {
-    struct limine_memmap_entry *memmap_entries = *kerndata.memmap.entries;
-    uint64_t max_bitmap_bytes = ((memmap_entries[section_index].length - bitmap_reserved) / 4096) / 8;
-    uint64_t pages_in_section = max_bitmap_bytes * 8;
-    uint64_t top_page = page_frame_number + num_pages;
-    if (top_page > pages_in_section) {
-        return false;
-    }
-    uint8_t *bitmap_start = (uint8_t*) (*kerndata.memmap.entries)[section_index].base + kerndata.hhdm_offset;
-    if (memmap_entries[section_index].type != LIMINE_MEMMAP_USABLE) {
-        return false;
-    }
-    if (pages_in_section < num_pages) {
-        return false;
-    }
-    for (; page_frame_number < top_page; page_frame_number++) {
-        // check if the single page is avaliable. If not, break.
-        uint64_t byte = page_frame_number / 8;
-        uint64_t bit  = page_frame_number % 8;
-        if ((bitmap_start[byte] >> bit) & 1) return false;
+void *pmmgr_kmalloc(uint64_t size) { // Size in pages
+    size = size * 4096;
+    uint64_t needed_pages = (size + 0x1000 - 1) / 0x1000;
+    uint64_t free_page = pmmgr_find_free_pages(size);
+
+    //printf("Allocating free page\n");
+
+    for (uint64_t i = 0; i < needed_pages; i++) {
+        pmmgr_set_used(free_page + i);
     }
 
-    // No pages were marked as used.
-    return true;
+    return (void*)(free_page * 0x1000); // Returns physical addr
 }
 
-void pmmgr_allocate_page(uint64_t section_index, uint64_t page_frame_number) {
-    uint8_t* bitmap_start = (uint8_t*) (*kerndata.memmap.entries)[section_index].base + kerndata.hhdm_offset;
-    uint64_t byte = page_frame_number / 8;
-    uint64_t bit = page_frame_number % 8;
-    uint8_t or_value = (bit) ? (1 << bit) : 1;
-    uint8_t* current_byte = (uint8_t*) (((uint64_t) bitmap_start) + (uint64_t)(byte));
-    *current_byte = *current_byte | or_value;
+void pmmgr_free(void *addr, uint64_t size) { // 현재 몰라...
+    uint64_t page = (uint64_t)addr / 0x1000;
+    uint64_t pages = (size + 0x1000 - 1) / 0x1000;
+
+    for (uint64_t i = 0; i < pages; i++) {
+        pmmgr_set_free(page + i);
+    }
 }
 
-void pmmgr_allocate_pages(uint64_t section_index, uint64_t page_frame_number, size_t num_pages) {
-    for (size_t i = 0; i < num_pages; i++) {
-        pmmgr_allocate_page(section_index, page_frame_number + i);
-    }
+void pmmgr_print_bitmap() {
+    printf("Total Bitmap Pages: %lld, ", pmmgr_total_bitmap_pages);
+    printf("Used Bitmap Pages: %lld, ", pmmgr_used_bitmap_pages);
+    printf("Free Bitmap Pages: %lld\n", pmmgr_free_bitmap_pages);
 }

@@ -13,6 +13,7 @@ struct tss_t {
 } __attribute__((packed));
 
 void gdt_init();
+void tss_init();
 uint64_t gdt_assemble_entry(uint64_t base, uint64_t limit, uint64_t access, uint64_t flags);
 void gdt_assemble_tss(uint64_t* GDT, uint8_t index, uint64_t base, uint64_t limit, uint64_t access, uint64_t flags);
 
