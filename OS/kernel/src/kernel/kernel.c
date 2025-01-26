@@ -103,13 +103,13 @@ void kernel_entry(void) {
     framebuffer_fill_background(0x000000);
 
     // Print compile time to console
-    printf("HOJUIX 0.3A x86_64 - Build Time: %s ", __DATE__);
-    printf("%s\n", __TIME__);
+    printf("HOJUIX 0.3A x86_64 - Build Time: %s %s\n", __DATE__, __TIME__);
 
     // Initialize the Memory Managers
     pmmgr_init();
-    vmmgr_init();
-    vmmgr_switch_structures();
+    // NOTE: Disabling paging due to MASSIVE issues
+    //vmmgr_init();
+    //vmmgr_switch_structures();
 
     // Initialize GDT
     tss_init();
@@ -128,10 +128,6 @@ void kernel_entry(void) {
     // Initialize COM1 @ 115200bps
     //rs232_init(1, 115200);
 
-    // Initialize VMM
-    //vmmgr_init(); // Still completely non functional
-    //pmmgr_print_bitmap();
-
     // Enable interrupts
     asm volatile("sti");
 
@@ -141,10 +137,10 @@ void kernel_entry(void) {
     //
     
     // Initialize the PIT Timer TODO Not functional for ...some... reason
-    //pit_timer_init();
+    pit_timer_init();
 
     // Initialize PS2 Keyboard
-    ps2_keyboard_init();
+    //ps2_keyboard_init();
 
 
 

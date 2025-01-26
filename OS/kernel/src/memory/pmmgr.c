@@ -42,10 +42,7 @@ void pmmgr_init() { // Feed mem_size ALL (All types) memory, in bytes, and bitma
     }
 
     // Print basic memory info to console
-    printf("Total Memory: %lld mb (", total_mem / 1024 / 1024);
-    printf("%lld mb usable / ", total_usable_mem / 1024 / 1024);
-    printf("%lld mb reserved)\n", total_reserved_mem / 1024 / 1024);
-    //printf("HHDM offset: %lx\n", hhdm_offset);
+    printf("Total Memory: %lld mb (%lld mb usable / %lld mb reserved)\n", total_mem / 1024 / 1024, total_usable_mem / 1024 / 1024, total_reserved_mem / 1024 / 1024);
     
     // Calculate bitmap page count and size
     pmmgr_total_bitmap_pages = (total_mem + 0x1000 - 1) / 0x1000;
