@@ -29,9 +29,9 @@ void pmmgr_init() { // Feed mem_size ALL (All types) memory, in bytes, and bitma
     for (uint64_t i = 0; i < entry_count; i++) {
         struct limine_memmap_entry *entry = entries[i];
         //printf("Mem Region %llu: ", i);
-        //printf("Base: 0x%lx, ", entry->base);
-        //printf("Length: 0x%lx, ", entry->length);
-        //printf("Type: %u\n", entry->type);
+        //printf("Base: 0x%llx, ", entry->base);
+        //printf("Length: 0x%llx, ", entry->length);
+        //printf("Type: %u\r\n", entry->type);
 
         total_mem += entry->length;
         if (entry->type == LIMINE_MEMMAP_USABLE || entry->type == LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE) {
@@ -42,8 +42,8 @@ void pmmgr_init() { // Feed mem_size ALL (All types) memory, in bytes, and bitma
     }
 
     // Print basic memory info to console
-    printf("Total Memory: %lld mb (%lld mb usable / %lld mb reserved)\n", total_mem / 1024 / 1024, total_usable_mem / 1024 / 1024, total_reserved_mem / 1024 / 1024);
-    
+    //printf("Total Memory: %lld mb (%lld mb usable / %lld mb reserved)\n", total_mem / 1024 / 1024, total_usable_mem / 1024 / 1024, total_reserved_mem / 1024 / 1024);
+
     // Calculate bitmap page count and size
     pmmgr_total_bitmap_pages = (total_mem + 0x1000 - 1) / 0x1000;
     pmmgr_bitmap_bytes = (pmmgr_total_bitmap_pages + 8 - 1) / 8; // Dividing by 8 because 8 pages per byte
@@ -51,14 +51,18 @@ void pmmgr_init() { // Feed mem_size ALL (All types) memory, in bytes, and bitma
     // Iterate over the memory map to find a spot large enough to store the bitmap
     for (uint64_t i = 0; i < entry_count; i++) {
         struct limine_memmap_entry *entry = entries[i];
-        if (entry->type == LIMINE_MEMMAP_USABLE || entry->type == LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE) {
-            if (entry->length >= pmmgr_bitmap_bytes) {
-                // Found a space large enough
-                //printf("Bitmap Location: 0x%lx - ", entry->base);
-                //printf("0x%lx\n", entry->base + pmmgr_bitmap_bytes);
-                bitmap = (void*) (entry->base + (uint64_t)hhdm_offset);
-                break;
-            }
+        //if (entry->type == LIMINE_MEMMAP_USABLE || entry->type == LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE) {
+        if (entry->type == LIMINE_MEMMAP_USABLE) {
+            // Blacklist memory below 0x100000
+            //if (entry->base >= 0x100000) {
+                if (entry->length >= pmmgr_bitmap_bytes) {
+                    // Found a space large enough
+                    //printf("Bitmap Location: 0x%llx - ", entry->base);
+                    //printf("0x%llx\n", entry->base + pmmgr_bitmap_bytes);
+                    bitmap = (void*) (entry->base + (uint64_t)hhdm_offset);
+                    break;
+                }
+                //}
         }
     }
 
@@ -74,28 +78,42 @@ void pmmgr_init() { // Feed mem_size ALL (All types) memory, in bytes, and bitma
     // Set the bitmap up according to the limine memory map (blacklist reserved memory etc) TODO CHECK
     for (uint64_t i = 0; i < entry_count; i++) {
         struct limine_memmap_entry *entry = entries[i];
-        if (entry->type == LIMINE_MEMMAP_USABLE || entry->type == LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE) {
-            
-            if (entry->base == (uint64_t)bitmap - (uint64_t)hhdm_offset) {
-                // This is where the bitmap is stored, do not want to mark the bitmap as free memory
-                uint64_t bitmap_end_byte = (uint64_t)bitmap + pmmgr_bitmap_bytes;
-                uint64_t bitmap_end_page = ((bitmap_end_byte + 0x1000 - 1) / 0x1000) * 0x1000;
-                uint64_t entry_end_page = (entry->base + entry->length) / 0x1000; // The tutorial says usable pages are guaranteed to be page aligned in stivale. Usable and bootloader reclaimable are also in limine.
+        //if (entry->type == LIMINE_MEMMAP_USABLE || entry->type == LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE) {
+        if (entry->type == LIMINE_MEMMAP_USABLE) {
+            // Blacklist memory below 0x100000
+            //if (entry->base >= 0x100000) {
 
-                // Continue until we have freed all pages
-                for (uint64_t page = bitmap_end_page; page < entry_end_page; page++) {
-                    pmmgr_set_free(page);
-                }
-            } else {
-                uint64_t page = entry->base / 0x1000;
-                uint64_t count = entry->length / 0x1000;
+                if (entry->base == (uint64_t)bitmap - (uint64_t)hhdm_offset) {
+                    // This is where the bitmap is stored, do not want to mark the bitmap as free memory
+                    uint64_t bitmap_end_byte = (uint64_t)bitmap + pmmgr_bitmap_bytes;
+                    uint64_t bitmap_end_page = ((bitmap_end_byte + 0x1000 - 1) / 0x1000) * 0x1000;
+                    uint64_t entry_end_page = (entry->base + entry->length) / 0x1000; // The tutorial says usable pages are guaranteed to be page aligned in stivale. Usable and bootloader reclaimable are also in limine.
 
-                for (uint64_t j = 0; j < count; j++) {
-                    pmmgr_set_free(page + j);
+                    // Continue until we have freed all pages
+                    for (uint64_t page = bitmap_end_page; page < entry_end_page; page++) {
+                        pmmgr_set_free(page);
+                    }
+                } else {
+                    uint64_t page = entry->base / 0x1000;
+                    uint64_t count = entry->length / 0x1000;
+
+                    for (uint64_t j = 0; j < count; j++) {
+                        pmmgr_set_free(page + j);
+                    }
                 }
-            }
+
+                //}
         }
     }
+
+    // Blacklist the first 0x100000 (1mb) of memory
+    // REASON: Most motherboard BIOSes and operating systems blacklist this region, but for some reason, my motherboard (MS-7D77)
+    //         marks this region as available, but triple faults if you change it (lmao)
+    //printf("--- BEFORE BLACKLIST ---\n");
+    //pmmgr_print_bitmap();
+    //printf("------------------------\n");
+    //memset(bitmap, 0xFF, 32); // Mark the first 0x100000 as used (essentially blacklisting it)
+    // TODO - Update page counts here
 }
 
 void pmmgr_set_used(uint64_t page) {

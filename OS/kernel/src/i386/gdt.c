@@ -72,7 +72,7 @@ uint64_t gdt_assemble_entry(uint64_t base, uint64_t limit, uint64_t access, uint
     gdt_entry |= base3 << 56;
     gdt_entry |= access << 40;
     gdt_entry |= flags << 52;
-    
+
     return gdt_entry;
 }
 

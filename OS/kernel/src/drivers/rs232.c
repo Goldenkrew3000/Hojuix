@@ -82,12 +82,14 @@ int rs232_init(int port, long baudrate) {
     // Actually initialize the serial port
     out8(hex_port + 1, 0x00); // Disable all interrupts
     out8(hex_port + 3, 0x80); // Enable DLAB
-    out8(hex_port + 0, 0x02); // Set divisor to 2 (lo byte) 57600 baud
+    out8(hex_port + 0, 0x02); // Set divisor to 2 (lo byte) 57600 baud              TODO THIS IS LOCKED AT 56K
     out8(hex_port + 1, 0x00); // (hi byte)
     out8(hex_port + 3, 0x03); // 8 bits, no parity, 1 stop bit (8n1)
     out8(hex_port + 2, 0xC7); // Enable FIFO
-    out8(hex_port + 4, 0x0B); // IRQs Enabled, RTS/DSR set
-    
+    //out8(hex_port + 4, 0x0B); // IRQs Enabled, RTS/DTR set
+    //out8(hex_port + 4, 0x03); // IRQs disabled, RTS/DTR enabled
+    out8(hex_port + 4, 0x00); //
+
     // Test the serial chip
     out8(hex_port + 4, 0x1E); // Set in loopback mode (To test the serial chip)
     out8(hex_port + 0, 0xAE); // Send byte 0xAE for test
@@ -125,7 +127,7 @@ int rs232_writeline(int port, char* string) {
     for (uint32_t i = 0; i < strlen(string); i++) {
         rs232_write(hex_port, string[i]);
     }
-    
+
     return 0;
 }
 
@@ -159,7 +161,7 @@ __attribute__((interrupt))
 void irq_rs232_port1_handler(void*) {
     // IRQ Handler for serial port 1 (0x3F8)
     printf("Data received on Serial Port 1\n");
-    
+
     // ACK the interrupt
     irq_ack(4);
 }
@@ -168,7 +170,7 @@ __attribute__((interrupt))
 void irq_rs232_port2_handler(void*) {
     // IRQ Handler for serial port 2 (0x2F8)
     printf("Data received on Serial Port 2\n");
-    
+
     // ACK the interrupt
     irq_ack(3);
 }

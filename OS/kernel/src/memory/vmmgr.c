@@ -6,7 +6,22 @@
 #include <kernel.h>
 #include <kernel/memory/pmmgr.h>
 #include <kernel/memory/vmmgr.h>
+#include <kernel/drivers/rs232.h>
 #include <kernel_ext/limine.h>
+
+extern char kern_text_start_addr[];
+extern char kern_text_end_addr[];
+extern char kern_rodata_start_addr[];
+extern char kern_rodata_end_addr[];
+extern char kern_data_start_addr[];
+extern char kern_data_end_addr[];
+
+uint64_t hhdm_off = 0xFFFF800000000000;
+
+// keep build happy
+//uint64_t kernel_start;
+//uint64_t writeallowed_start;
+//uint64_t kernel_end;
 
 extern uint64_t KERNEL_START_SYM[];
 extern uint64_t KERNEL_WRITE_SYM[];
@@ -15,10 +30,30 @@ uint64_t kernel_start = (uint64_t)KERNEL_START_SYM;
 uint64_t writeallowed_start = (uint64_t)KERNEL_WRITE_SYM;
 uint64_t kernel_end = (uint64_t)KERNEL_END_SYM;
 
+
 void vmmgr_init() {
-    printf("[VMMGR] Initializing...\n");
-    uint64_t pml4_virt = ((uint64_t)pmmgr_kmalloc(1)) + kerndata.hhdm_offset;
+    //printf("[VMMGR] Initializing...\n");
+    rs232_writeline(1, "[VMMGR] Initializing...\r\n");
+
+    uintptr_t text_start = PAGE_ALIGN_DOWN((uintptr_t)kern_text_start_addr);
+    uintptr_t rodata_start = PAGE_ALIGN_DOWN((uintptr_t)kern_rodata_start_addr);
+	uintptr_t data_start = PAGE_ALIGN_DOWN((uintptr_t)kern_data_start_addr);
+	uintptr_t text_end = PAGE_ALIGN_UP((uintptr_t)kern_text_end_addr);
+	uintptr_t rodata_end = PAGE_ALIGN_UP((uintptr_t)kern_rodata_end_addr);
+	uintptr_t data_end = PAGE_ALIGN_UP((uintptr_t)kern_data_end_addr);
+
+	uint64_t paddr = kerndata.kernel_addr.physical_base;
+	uint64_t vaddr = kerndata.kernel_addr.virtual_base;
+
+	rs232_writeline(1, "[VMMGR] Have addresses\r\n");
+
+	// Malloc and zero PML4 page
+    uintptr_t pml4_virt = (uintptr_t)pmmgr_kmalloc(1) + (uintptr_t)hhdm_off;
+    memset((void*)pml4_virt, 0x00, 4096);
     kern_memset((uint8_t*)pml4_virt, 0, 4096);
+
+    // Map kernel
+
     vmmgr_map_all((uint64_t*)pml4_virt);
     kerndata.cr3 = pml4_virt - kerndata.hhdm_offset;
 }
@@ -51,7 +86,7 @@ uint64_t vmmgr_virt_to_phys(uint64_t pml4_addr[], uint64_t virt_addr) {
                     return 0xDEAD;
                 else
                     pml1_addr = (uint64_t*)(PAGE_ALIGN_DOWN(pml2_addr[pml2]) + kerndata.hhdm_offset);
-                
+
                 if (pml1_addr[pml1] == 0)
                     return 0xDEAD;
 
@@ -104,7 +139,7 @@ void vmmgr_map_pages(uint64_t pml4_addr[], uint64_t virt_addr, uint64_t phys_add
         } else {
             pml3_addr = (uint64_t*)(PAGE_ALIGN_DOWN(pml4_addr[pml4]) + kerndata.hhdm_offset);
         }
-        
+
         for (; pml3 < 512; pml3++) {
             uint64_t *pml2_addr = NULL;
             if (pml3_addr[pml3] == 0) {
@@ -140,7 +175,7 @@ void vmmgr_map_pages(uint64_t pml4_addr[], uint64_t virt_addr, uint64_t phys_add
     }
     printf("no more virt mem\n");
     asm volatile("hlt");
-} 
+}
 
 void vmmgr_alloc_pages(uint64_t pml4_addr[], uint64_t virt_addr, uint64_t num_pages, uint64_t flags) {
     virt_addr &= ~TOPBITS;
@@ -179,7 +214,7 @@ void vmmgr_alloc_pages(uint64_t pml4_addr[], uint64_t virt_addr, uint64_t num_pa
                 } else {
                     pml1_addr = (uint64_t*)(PAGE_ALIGN_DOWN(pml2_addr[pml2]) + kerndata.hhdm_offset);
                 }
-                
+
                 for (; pml1 < 512; pml1++) {
                     uint64_t phys = (uint64_t)pmmgr_kmalloc(1);
                     pml1_addr[pml1] = phys | flags;
@@ -222,7 +257,7 @@ void vmmgr_map_kernel(uint64_t pml4[]) {
     /* map from writeallowed_start to kernel_end with `present` and `write` flags */
     length_buffer = PAGE_ALIGN_UP(kernel_end - writeallowed_start);
     phys_buffer = kerndata.kernel_addr.physical_base + (writeallowed_start - kerndata.kernel_addr.virtual_base);
-    vmmgr_map_pages(pml4, PAGE_ALIGN_DOWN(writeallowed_start), phys_buffer, length_buffer / 4096, KERNEL_PFLAG_PRESENT | KERNEL_PFLAG_WRITE); 
+    vmmgr_map_pages(pml4, PAGE_ALIGN_DOWN(writeallowed_start), phys_buffer, length_buffer / 4096, KERNEL_PFLAG_PRESENT | KERNEL_PFLAG_WRITE);
     // map the kernel's stack
     vmmgr_alloc_pages(pml4, KERNEL_STACK_ADDR, KERNEL_STACK_PAGES, KERNEL_PFLAG_PRESENT | KERNEL_PFLAG_WRITE);
 }

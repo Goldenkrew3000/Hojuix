@@ -83,33 +83,44 @@ void kernel_entry(void) {
         asm volatile("hlt");
     }
 
+    // Initialize RS232
+    rs232_init(1, 115200);
+    //rs232_writeline(1, "Hojuix x86_64 - 0x3F8/115200\r\n");
+
+    // Fetch HHDM offset, Memory map, and Kernel address to configure memory management
+    //rs232_writeline(1, "[LIMINE] Fetching HHDM Offset, Memory map, and Kernel address.\r\n");
+    kerndata.hhdm_offset = (hhdm_request.response)->offset;
+    kerndata.memmap = *memmap_request.response;
+    kerndata.kernel_addr = *(kernel_address_request.response);
+
+    // Initialize the Memory Managers
+    pmmgr_init();
+    vmmgr_init();
+    //vmmgr_switch_structures();
+
     // Ensure we have got a framebuffer
     if (framebuffer_request.response == NULL || framebuffer_request.response->framebuffer_count < 1) {
         // Could not fetch a framebuffer from limine
+        rs232_writeline(1, "[LIMINE] Could not find a framebuffer, halting.\r\n");
         asm volatile("hlt");
+    } else {
+        rs232_writeline(1, "[LIMINE] Found a framebuffer.\r\n");
     }
 
     // Fetch the first framebuffer
     struct limine_framebuffer *framebuffer = framebuffer_request.response->framebuffers[0];
 
     // Push required data to global kernel data storage
-    kerndata.hhdm_offset = (hhdm_request.response)->offset;
-    kerndata.memmap = *memmap_request.response;
-    kerndata.kernel_addr = *(kernel_address_request.response);
-    kerndata.smp_response = smp_request.response;
+
+
+    //kerndata.smp_response = smp_request.response;
 
     // Init framebuffer
     framebuffer_ssfn_init(framebuffer);
-    framebuffer_fill_background(0x000000);
+    framebuffer_fill_background(0x000080);
 
     // Print compile time to console
     printf("HOJUIX 0.3A x86_64 - Build Time: %s %s\n", __DATE__, __TIME__);
-
-    // Initialize the Memory Managers
-    pmmgr_init();
-    // NOTE: Disabling paging due to MASSIVE issues
-    //vmmgr_init();
-    //vmmgr_switch_structures();
 
     // Initialize GDT
     tss_init();
@@ -135,7 +146,7 @@ void kernel_entry(void) {
     //int ret = rs232_init(1, 57600);
     //rs232_writeline(1, "Hello world from RS232!\n");
     //
-    
+
     // Initialize the PIT Timer TODO Not functional for ...some... reason
     pit_timer_init();
 
