@@ -11,6 +11,7 @@
 #define KERNEL_PFLAG_PRESENT 0b1
 #define KERNEL_PFLAG_WRITE   0b10
 #define KERNEL_PFLAG_USER    0b100
+#define KERNEL_PFLAG_EXEC    (1ULL << 63)
 #define KERNEL_PFLAG_PXD     0b10000000000000000000000000000000000000000000000000000000000000 // a bit long lmao
 
 #define PAGE_SIZE 4096
@@ -43,8 +44,9 @@
 
 #define vmmgr_switch_structures() \
     KERNEL_SWITCH_PAGE_TREE(kerndata.cr3); \
-    KERNEL_SWITCH_STACK();
+    //KERNEL_SWITCH_STACK();
 
+uintptr_t vmmgr_kalloc_page(uintptr_t virt_addr);
 void vmmgr_init();
 uint64_t vmmgr_virt_to_phys(uint64_t pml4_addr[], uint64_t virt_addr);
 void vmmgr_write_vmem(uint64_t *pml4_addr, uint64_t virt_addr, char *data, size_t len);

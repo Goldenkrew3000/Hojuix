@@ -11,8 +11,12 @@
 
 void idt_init() {
     // Allocate a block of memory for the IDT
-    struct idt_entry_t *idt_content = (struct idt_entry_t*)((uint64_t)pmmgr_kmalloc(1) + ((uint64_t)kerndata.hhdm_offset));
-    
+    //struct idt_entry_t *idt_content = (struct idt_entry_t*)((uint64_t)pmmgr_kmalloc(1) + ((uint64_t)kerndata.hhdm_offset));
+    vmmgr_kalloc_page(0xa0000001000); // Virtually map a page at 0xfffe000000000000
+    uint64_t* idt_content_page = (uint64_t*)0xa0000001000; // Assign a uint64_t to 0xfffe000000000000
+    memset((void*)idt_content_page, 0x00, 4096); // Memset the page to 0x00
+    struct idt_entry_t *idt_content = (struct idt_entry_t*)idt_content_page;
+
     // Assemble the IDT
     idt_assemble_entry(0, &isr_divideError, 0x8E, idt_content);
     idt_assemble_entry(1, &isr_debugException, 0x8E, idt_content);
@@ -144,4 +148,3 @@ void isr_pageFault(void*) {
     printf("ISR: Page Fault (0xE)\n");
     abort();
 }
-
