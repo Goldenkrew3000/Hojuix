@@ -25,9 +25,9 @@ void irq_pit_timer_handler(void*) {
     // PIT Timer runs at 18.222Hz (By default)
     PIT_timer_ticks++;
 
-    if (PIT_timer_ticks % 100 == 0) {
-        printf("TIME %d\n", PIT_timer_ticks);
-    }
+    //if (PIT_timer_ticks % 100 == 0) {
+        //printf("TIME %d\n", PIT_timer_ticks);
+        //}
 
     // ACK the interrupt
     irq_ack(0);

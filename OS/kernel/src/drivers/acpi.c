@@ -7,17 +7,20 @@
 #include <kernel/drivers/acpi.h>
 #include <kernel_ext/limine.h>
 
+#include <kernel/memory/vmmgr.h>
+
 /*
 // ACPI Notes
 // All addresses are PHYSICAL
 // The only tables with 8 byte length signatures are the RSDP and XSDP
 */
 
-#define HHDT_OFFSET 0xFFFF800000000000
+uintptr_t hhdt_offset = 0xFFFF800000000000;
 
 // ACPI Variables
-uint64_t* fadt_table_addr;
-uint64_t* madt_table_addr;
+uint64_t* fadt_table_addr = NULL;
+uint64_t* madt_table_addr = NULL;
+uint64_t* ssdt_table_addr = NULL;
 
 // Request the ACPI RSDP Location
 __attribute__((used, section(".requests")))
@@ -140,7 +143,7 @@ void acpi_init() {
     struct RSDP_t* rsdp = (struct RSDP_t*)rsdp_addr;
 
     // TODO: Check the RSDP Checksum
-    
+
     // Check RSDP for the ACPI version
     if (rsdp->revision == 0) {
         printf("Your system is using ACPI 1.0, which is not supported.\n");
@@ -157,42 +160,59 @@ void acpi_init() {
 
 void acpi_handle_xsdt() {
     // Load the XSDT pointer from the XSDP into the XSDT Struct
-    uint64_t* xsdt_addr = (uint64_t*)((uintptr_t)xsdp->xsdt_addr + HHDT_OFFSET);
+    uint64_t* xsdt_addr = (uint64_t*)((uintptr_t)xsdp->xsdt_addr + hhdt_offset);
     XSDT_t* xsdt = (XSDT_t*)xsdt_addr;
 
-    // Check the checksum of the XSDT table
-    //unsigned char xsdt_checksum_sum = 0;
-    //for (int i = 0; i < xsdt->acpi_header.length; i++) {
-    //    printf("spam\n");
-    //    xsdt_checksum_sum += ((char*)xsdt->acpi_header[i]);
-    //}
-    //printf("SUM: %d\n", xsdt_checksum_sum);
+    // Check the checksum of the XSDT table TODO
 
     // Load pointers for the other tables
     uint64_t* table_addrs = (uint64_t*)xsdt->table_pointers;
     int table_entries = (xsdt->acpi_header.length - sizeof(ACPI_t)) / sizeof(uint64_t);
     printf("XSDT: Entry pointers: %d\n", table_entries);
 
+    // List all the tables
+    /*
+    for (int i = 0; i < table_entries; i++) {
+        uint64_t* addr = (uint64_t*)((uintptr_t)table_addrs[i] + hhdt_offset);
+        ACPI_t* table = (ACPI_t*)addr;
+        printf("New Table: %.4s\n", table->signature);
+        //printf("Table addr: %llx ---- OR ---- %llx\n", table_addrs[i], ((uintptr_t)table_addrs[i] + hhdt_offset));
+    }
+    */
+
+    //uintptr_t addr = (uintptr_t)table_addrs[0] + hhdt_offset;
+    //uintptr_t phy = vmmgr_virt_to_phys_ext(addr);
+    //uint8_t* dat = (uint8_t*)addr;
+    //printf("%02X ", dat[i]);
+
     // Check the tables at the pointers for desired ACPI tables
     for (int i = 0; i < table_entries; i++) {
-        uint64_t* addr = (uint64_t*)((uintptr_t)table_addrs[i] + HHDT_OFFSET);
+        uint64_t* addr = (uint64_t*)((uintptr_t)table_addrs[i] + hhdt_offset);
         ACPI_t* table = (ACPI_t*)addr;
-        
+
         // Search for certain ACPI tables
         // NOTE: The strings are NOT null terminated, hence the use of memcmp
         if (memcmp(table->signature, "FACP", 4) == 0) {
             // Found the FACP / FADT Table
-            fadt_table_addr = (uint64_t*)addr;
+            fadt_table_addr = (uint64_t*)addr; // FADT is for Power Management (https://wiki.osdev.org/FADT)
         }
 
         if (memcmp(table->signature, "APIC", 4) == 0) {
             // Found the APIC / MADT Table
-            madt_table_addr = (uint64_t*)addr;
+            madt_table_addr = (uint64_t*)addr; // MADT is for Clocks / Interrupts, and maybe SMP enumeration (https://wiki.osdev.org/MADT)
+        }
+
+        if (memcmp(table->signature, "SSDT", 4) == 0) {
+            // Found the SSDT Table
+            ssdt_table_addr = (uint64_t*)addr; // SSDT is a suppliment to DSDT (https://wiki.osdev.org/SSDT)
         }
     }
 
     // Jump to the FADT handler
-    acpi_handle_fadt();
+    if (fadt_table_addr != NULL) {
+        printf("Found FADT table address.\n");
+        acpi_handle_fadt();
+    }
 }
 
 #include <kernel/i386/io.h>
@@ -200,15 +220,17 @@ void acpi_handle_xsdt() {
 
 void acpi_handle_fadt() {
     // Load the FADT pointer into the FADT struct
-    uint64_t* fadt_addr = (uint64_t*)fadt_table_addr; // NOTE: Offset already applied from above
-    FADT_t* fadt = (FADT_t*)fadt_addr;
+    //uint64_t* fadt_addr = (uint64_t*)fadt_table_addr; // NOTE: Offset already applied from above
+    FADT_t* fadt = (FADT_t*)fadt_table_addr;
 
-    //printf("FADT sig: %p\n", fadt->reset_reg.address);
-    //printf("Reser val: %.2x\n", fadt->reset_value);
-    //uint64_t* reset_reg_final = fadt->reset_reg.address + (uint64_t)hhdt_offset;
-    //printf("final addr: %p\n", reset_reg_final);
+    /*
+    printf("FADT sig: %p\n", fadt->reset_reg.address);
+    printf("Reser val: %.2x\n", fadt->reset_value);
+    uintptr_t reset_reg_final = (uintptr_t)fadt->reset_reg.address + hhdt_offset;
+    printf("final addr: %p\n", reset_reg_final);
 
-    //printf("ACPI rebooting in 5 seconds...");
-    //timer_wait(5000);
-    //outb(reset_reg_final, fadt->reset_value);
+    printf("ACPI rebooting in 5 seconds...");
+    timer_wait(5000);
+    out8(reset_reg_final, fadt->reset_value);
+    */
 }

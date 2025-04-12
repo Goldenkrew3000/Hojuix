@@ -37,6 +37,14 @@ uintptr_t vmmgr_kalloc_page(uintptr_t virt_addr) {
     vmmgr_alloc_pages((uint64_t*)pml4_global, virt_addr, 1, KERNEL_PFLAG_PRESENT | KERNEL_PFLAG_WRITE);
 }
 
+// INFO: This is used for debugging if a physical address (calculated to a virtual address) is on the TLB
+// In the case of ACPI: No, it returned 0xdead on real hardware, but the same phys address in an emulator
+// Effectively, debugging the TLB on real hardware to find the root cause of a page fault
+uintptr_t vmmgr_virt_to_phys_ext(uintptr_t virt_addr) {
+    uint64_t res = vmmgr_virt_to_phys((uint64_t*)pml4_global, virt_addr);
+    return (uintptr_t)res;
+}
+
 void vmmgr_init() {
     //printf("[VMMGR] Initializing...\n");
     rs232_writeline(1, "[VMMGR] Initializing...\r\n");
@@ -238,6 +246,16 @@ void vmmgr_map_sections(uint64_t pml4[]) {
             vmmgr_map_pages(pml4, memmap_entries[entry].base + kerndata.hhdm_offset, memmap_entries[entry].base, memmap_entries[entry].length / 4096, KERNEL_PFLAG_PRESENT | KERNEL_PFLAG_WRITE);
         }
     }
+
+    // ISSUE: On my thinkpad, the ACPI XSDT table is inside ACPI, but the FACP/etc tables are in a RESERVED patch!?!??!
+    // FIX: For now, map RESERVED memory as present but only read. Future fix could to to map it if it's not on the pagemap (I can do that: I know length, where, and can check the TLB)
+    // But I am planning on reworking the paging code, and that would be a relatively major thing to implement
+    for (size_t entry = 0; entry < num_memmap_entries; entry++) {
+        uint64_t entry_type = memmap_entries[entry].type;
+        if (entry_type == LIMINE_MEMMAP_RESERVED) {
+            vmmgr_map_pages(pml4, memmap_entries[entry].base + kerndata.hhdm_offset, memmap_entries[entry].base, memmap_entries[entry].length / 4096, KERNEL_PFLAG_PRESENT);
+        }
+    }
 }
 
 void vmmgr_map_kernel(uint64_t pml4[]) {
@@ -307,4 +325,20 @@ void vmmgr_map_kernel(uint64_t pml4[]) {
 void vmmgr_map_all(uint64_t pml4[]) {
     vmmgr_map_kernel(pml4);
     vmmgr_map_sections(pml4);
+}
+
+void vmmgr_print_limine_memmap() {
+    uint64_t num_memmap_entries                = kerndata.memmap.entry_count;
+    struct limine_memmap_entry *memmap_entries = *kerndata.memmap.entries;
+    for (size_t entry = 0; entry < num_memmap_entries; entry++) {
+        uint64_t entry_type = memmap_entries[entry].type;
+        if (entry_type == LIMINE_MEMMAP_KERNEL_AND_MODULES ||
+            entry_type == LIMINE_MEMMAP_ACPI_NVS ||
+            entry_type == LIMINE_MEMMAP_RESERVED) {
+                printf("Mem Region %llu: ", entry_type);
+                printf("Base: 0x%llx, ", memmap_entries[entry].base);
+                printf("Length: 0x%llx, ", memmap_entries[entry].length);
+                printf("Type: %u\r\n", memmap_entries[entry].type);
+        }
+    }
 }

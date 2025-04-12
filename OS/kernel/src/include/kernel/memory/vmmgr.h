@@ -12,7 +12,6 @@
 #define KERNEL_PFLAG_WRITE   0b10
 #define KERNEL_PFLAG_USER    0b100
 #define KERNEL_PFLAG_EXEC    (1ULL << 63)
-#define KERNEL_PFLAG_PXD     0b10000000000000000000000000000000000000000000000000000000000000 // a bit long lmao
 
 #define PAGE_SIZE 4096
 #define KERNEL_STACK_PAGES 2LL
@@ -47,6 +46,7 @@
     //KERNEL_SWITCH_STACK();
 
 uintptr_t vmmgr_kalloc_page(uintptr_t virt_addr);
+uintptr_t vmmgr_virt_to_phys_ext(uintptr_t virt_addr);
 void vmmgr_init();
 uint64_t vmmgr_virt_to_phys(uint64_t pml4_addr[], uint64_t virt_addr);
 void vmmgr_write_vmem(uint64_t *pml4_addr, uint64_t virt_addr, char *data, size_t len);
@@ -56,5 +56,6 @@ void vmmgr_alloc_pages(uint64_t pml4_addr[], uint64_t virt_addr, uint64_t num_pa
 void vmmgr_map_sections(uint64_t pml4[]);
 void vmmgr_map_kernel(uint64_t pml4[]);
 void vmmgr_map_all(uint64_t pml4[]);
+void vmmgr_print_limine_memmap();
 
 #endif

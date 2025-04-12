@@ -21,6 +21,7 @@ $CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/gdt.c -o obj/i386/gdt.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/idt.c -o obj/i386/idt.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/irq.c -o obj/i386/irq.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/spinlock.c -o obj/i386/spinlock.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/cpuinfo.c -o obj/i386/cpuinfo.o
 
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/acpi.c -o obj/drivers/acpi.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/pci.c -o obj/drivers/pci.o
@@ -46,6 +47,7 @@ obj/i386/gdt.o \
 obj/i386/idt.o \
 obj/i386/irq.o \
 obj/i386/spinlock.o \
+obj/i386/cpuinfo.o \
 obj/drivers/acpi.o \
 obj/drivers/pci.o \
 obj/drivers/ahci.o \

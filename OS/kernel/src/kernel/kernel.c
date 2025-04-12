@@ -9,6 +9,7 @@
 #include <kernel/i386/gdt.h>
 #include <kernel/i386/idt.h>
 #include <kernel/i386/irq.h>
+#include <kernel/i386/cpuinfo.h>
 #include <kernel/drivers/ps2_keyboard.h>
 
 #include <kernel/i386/io.h>
@@ -74,16 +75,6 @@ static volatile LIMINE_REQUESTS_END_MARKER;
 // Create Global Kernel Data Storage
 kernel_t kerndata = {0};
 
-
-
-
-
-
-void fake_stub_a();
-void fake_stub_b();
-
-
-
 void kernel_entry(void) {
     // Disable interrupts
     asm volatile("cli");
@@ -92,10 +83,6 @@ void kernel_entry(void) {
     if (LIMINE_BASE_REVISION_SUPPORTED == false) {
         asm volatile("hlt");
     }
-
-    // Initialize RS232
-    //rs232_init(1, 115200);
-    //rs232_writeline(1, "Hojuix x86_64 - 0x3F8/115200\r\n");
 
     // Fetch HHDM offset, Memory map, and Kernel address to configure memory management
     //rs232_writeline(1, "[LIMINE] Fetching HHDM Offset, Memory map, and Kernel address.\r\n");
@@ -121,23 +108,21 @@ void kernel_entry(void) {
     // Fetch the first framebuffer
     struct limine_framebuffer *framebuffer = framebuffer_request.response->framebuffers[0];
 
-    // Push required data to global kernel data storage
-
-
-    //kerndata.smp_response = smp_request.response;
-
     // Init framebuffer
     framebuffer_ssfn_init(framebuffer);
     framebuffer_fill_background(0x000080);
 
-    //fake_stub_b();
-
-    // Print compile time to console
+    // Make first prints to the framebuffer
     printf("HOJUIX 0.4A (KMode Paging) x86_64 - Build Time: %s %s\n", __DATE__, __TIME__);
-
-
     pmmgr_print_bitmap();
-    printf("Paging test\n");
+    print_cpuid();
+
+    //vmmgr_print_limine_memmap();
+
+
+
+
+    //printf("Paging test\n");
     //uint64_t* data = (uint64_t*)0x1bf7be68cd2;
     //uintptr_t newpage = vmmgr_kalloc_page(0x1bf7be68cd2);
     //printf("%llx\n", *data);
@@ -145,7 +130,7 @@ void kernel_entry(void) {
 
 
     // Initialize GDT
-    //tss_init();
+    tss_init();
     gdt_init();
 
     // Initialize IDT
@@ -153,6 +138,8 @@ void kernel_entry(void) {
 
     // Initialize IRQ
     irq_init();
+
+    pmmgr_print_bitmap();
 
     // Print display info to console
     //printf("Framebuffer Size: %dx", framebuffer->width);
@@ -164,24 +151,16 @@ void kernel_entry(void) {
     // Enable interrupts
     asm volatile("sti");
 
-    // Initialize RS232
-    //int ret = rs232_init(1, 57600);
-    //rs232_writeline(1, "Hello world from RS232!\n");
-    //
-
-    // Initialize the PIT Timer TODO Not functional for ...some... reason
+    // Initialize the PIT Timer
     pit_timer_init();
 
     // Initialize PS2 Keyboard
     //ps2_keyboard_init();
 
-    uint64_t* data = (uint64_t*)0x1bf7be68cd2;
-    printf("%llx\n", *data);
-
 
 
     // Initialize ACPI
-    //acpi_init();
+    acpi_init();
 
     // Initialize PCI
     //pci_init();
@@ -194,11 +173,4 @@ void kernel_entry(void) {
     printf("[KERNEL] Reached end of kernel.\n");
     while(1) { }
     asm volatile("cli; hlt");
-}
-
-void fake_stub_a() {
-    return;
-}
-void fake_stub_b() {
-    return;
 }

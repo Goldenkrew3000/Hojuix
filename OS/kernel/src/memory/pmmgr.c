@@ -186,7 +186,7 @@ void pmmgr_free(void *addr, uint64_t size) { // 현재 몰라...
 }
 
 void pmmgr_print_bitmap() {
-    printf("Total Bitmap Pages: %lld, ", pmmgr_total_bitmap_pages);
-    printf("Used Bitmap Pages: %lld, ", pmmgr_used_bitmap_pages);
-    printf("Free Bitmap Pages: %lld\n", pmmgr_free_bitmap_pages);
+    printf("[PMMGR] Total Pages: %lld, ", pmmgr_total_bitmap_pages);
+    printf("Used Pages: %lld, ", pmmgr_used_bitmap_pages);
+    printf("Free Pages: %lld\n", pmmgr_free_bitmap_pages);
 }
