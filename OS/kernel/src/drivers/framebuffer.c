@@ -6,11 +6,19 @@
 #include <stdlib.h>
 #include <kernel/drivers/framebuffer.h>
 #include <kernel_ext/limine.h>
+#include <kernel/memory/pmmgr.h>
 
 #define SSFN_CONSOLEBITMAP_TRUECOLOR // Simple implementation
 #include <kernel_ext/ssfn.h> // SSFN2 (https://gitlab.com/bztsrc/scalable-font2)
 
-struct limine_framebuffer *g_fb;
+#define DIV_ROUND_UP(a, b) (((a) + (b) - 1) / (b))
+extern uint8_t* i386_kern_memset();
+extern uint32_t* i386_kern_memcpy();
+
+struct limine_framebuffer *g_fb; // Front framebuffer
+uint32_t* back_fb = NULL; // Back framebuffer
+long g_fb_size = 0;
+
 int currentLine = 0;
 uint32_t currentColor;
 
@@ -25,10 +33,16 @@ extern char _binary_unifont_sfn_start;
 // P.S. ABS is probably not necessary due to common screen sizes but it's there as a precaution
 */
 
+void framebuffer_update() {
+    volatile uint32_t *fb_ptr = g_fb->address;
+    i386_kern_memcpy(fb_ptr, back_fb, g_fb_size);
+}
+
 void framebuffer_draw_pixel(int x, int y, uint32_t color) {
     volatile uint32_t *fb_ptr = g_fb->address;
     size_t fb_idx = y * (g_fb->pitch / sizeof(uint32_t)) + x;
     fb_ptr[fb_idx] = color;
+    //back_fb[fb_idx] = color;
 }
 
 void framebuffer_fill_background(uint32_t color) {
@@ -42,7 +56,7 @@ void framebuffer_fill_background(uint32_t color) {
 
 void framebuffer_scroll(int lines) {
     // TODO: The math is fucked up in here, 4 lines is 16 lines outside of here.
-    volatile uint32_t *fb_ptr = g_fb->address;    
+    volatile uint32_t *fb_ptr = g_fb->address;
 
     // How many bytes per line
     int line_size = g_fb->pitch * lines;
@@ -51,31 +65,39 @@ void framebuffer_scroll(int lines) {
     long total_size = g_fb->pitch * g_fb->height;
 
     // Scroll by copying memory upwards
-    memcpy(g_fb->address, g_fb->address + line_size, total_size - line_size);
-    
+    i386_kern_memcpy(g_fb->address, g_fb->address + line_size, total_size - line_size);
+    //i386_kern_memcpy(g_fb->address, g_fb->address + line_size, total_size - line_size);
+
     // Fill in background color for new line
     for (int y = g_fb->height - lines; y < g_fb->height; y++) {
         for (int x = 0; x < g_fb->width; x++) {
             framebuffer_draw_pixel(x, y, currentColor);
         }
     }
-    
 }
 
 void framebuffer_ssfn_init(struct limine_framebuffer *fb) {
-    // TODO Currently the simple framebuffer
+    // Move framebuffer struct to this file so it can be called with any function here with ease
+    g_fb = fb;
+
+    // Allocate the back framebuffer
+    // Total size of the framebuffer in bytes
+    long total_size = g_fb->height * g_fb->pitch;
+    total_size = (g_fb->height * g_fb->pitch); // - (g_fb->pitch * 32); This was to make sure I wasn't overwriting outside of framebuffer space
+    g_fb_size = total_size;
+    back_fb = (uint32_t*)((uintptr_t)pmmgr_kmalloc(DIV_ROUND_UP(total_size, 4096)) + (uintptr_t)0xFFFF800000000000);
+    i386_kern_memset(back_fb, 0xAA, g_fb_size);
+
     // Can only implement the proper one once I have libc의 realloc and free
     ssfn_src = (ssfn_font_t*)&_binary_unifont_sfn_start;
     ssfn_dst.ptr = fb->address;
+    //ssfn_dst.ptr = (uint8_t*)back_fb;
     ssfn_dst.w = fb->width;
     ssfn_dst.h = fb->height;
     ssfn_dst.p = fb->pitch;
     ssfn_dst.x = 0;
     ssfn_dst.y = 0;
     ssfn_dst.fg = 0xFFFFFF;
-
-    // Move framebuffer struct to this file so it can be called with any function here with ease
-    g_fb = fb;
 }
 
 void framebuffer_putchar(char character) {
@@ -94,6 +116,8 @@ void framebuffer_putchar(char character) {
         //}
         ssfn_putc(character);
     }
+
+    //framebuffer_update();
 }
 
 void framebuffer_backspace() {

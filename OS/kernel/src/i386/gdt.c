@@ -19,8 +19,6 @@ void gdt_init() {
     vmmgr_kalloc_page(0xa0000000000); // Virtually map a page at 0xfffe000000000000
     uint64_t* gdt_content = (uint64_t*)0xa0000000000; // Assign a uint64_t to 0xfffe000000000000
     memset((void*)gdt_content, 0x00, 4096); // Memset the page to 0x00
-    //uint64_t* data = (uint64_t*)0xa0000000000;
-    //uintptr_t newpage = vmmgr_kalloc_page(0xa0000000000);
 
     // Assemble the GDT
     gdt_content[0] = gdt_assemble_entry(0, 0, 0, 0);
@@ -49,8 +47,8 @@ void gdt_init() {
                   mov %%ax, %%fs; \
                   mov %%ax, %%gs; \
                   mov %%ax, %%ss" : : : "eax", "rax"); // Far jump to the new GDT
-    //asm volatile("mov $0x28, %%ax; \
-                  //ltr %%ax" : : : "eax"); // Load the TSS
+    asm volatile("mov $0x28, %%ax; \
+                  ltr %%ax" : : : "eax"); // Load the TSS
     printf("[GDT] Initialized.\n");
 }
 

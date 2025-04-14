@@ -3,6 +3,7 @@ LD="ld"
 OBJCPY="objcopy"
 
 CFLAGS="-g -pipe -Wall -Wextra -std=gnu11 -nostdinc -ffreestanding -fno-stack-protector -fno-stack-check -fno-lto -fno-PIC -ffunction-sections -fdata-sections -m64 -march=x86-64 -mno-80387 -mno-mmx -mno-sse -mno-sse2 -mno-red-zone -mcmodel=kernel -isystem freestanding-headers"
+DANGEROUS_CFLAGS="-Wno-implicit-function-declaration" # Only use this when using functions directly imported from an assembly file
 LINK="-L ../libc"
 INCL="-I ../libc/include -I ../common -I src/include"
 
@@ -13,6 +14,7 @@ mkdir obj/i386
 mkdir obj/kernel
 mkdir obj/memory
 mkdir obj/drivers
+mkdir obj/fs
 
 # Btw .S asm is built the same way as .c
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/io.c -o obj/i386/io.o
@@ -22,18 +24,22 @@ $CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/idt.c -o obj/i386/idt.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/irq.c -o obj/i386/irq.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/spinlock.c -o obj/i386/spinlock.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/cpuinfo.c -o obj/i386/cpuinfo.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/memory.S -o obj/i386/memory.o
 
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/acpi.c -o obj/drivers/acpi.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/pci.c -o obj/drivers/pci.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/ahci.c -o obj/drivers/ahci.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/rtc.c -o obj/drivers/rtc.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/rs232.c -o obj/drivers/rs232.o
-$CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/framebuffer.c -o obj/drivers/framebuffer.o
+$CC $CFLAGS $DANGEROUS_CFLAGS $LINK $INCL -MMD -MP -c src/drivers/framebuffer.c -o obj/drivers/framebuffer.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/ps2_keyboard.c -o obj/drivers/ps2_keyboard.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/pit_timer.c -o obj/drivers/pit_timer.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/ata_pio.c -o obj/drivers/ata_pio.o
 
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/memory/pmmgr.c -o obj/memory/pmmgr.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/memory/vmmgr.c -o obj/memory/vmmgr.o
+
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/fs/fat16.c -o obj/fs/fat16.o
 
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/kernel/cc-runtime.c -o obj/kernel/cc-runtime.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/kernel/kernel.c -o obj/kernel/kernel.o
@@ -48,6 +54,7 @@ obj/i386/idt.o \
 obj/i386/irq.o \
 obj/i386/spinlock.o \
 obj/i386/cpuinfo.o \
+obj/i386/memory.o \
 obj/drivers/acpi.o \
 obj/drivers/pci.o \
 obj/drivers/ahci.o \
@@ -56,8 +63,10 @@ obj/drivers/rs232.o \
 obj/drivers/framebuffer.o \
 obj/drivers/ps2_keyboard.o \
 obj/drivers/pit_timer.o \
+obj/drivers/ata_pio.o \
 obj/memory/pmmgr.o \
 obj/memory/vmmgr.o \
+obj/fs/fat16.o \
 obj/kernel/cc-runtime.o \
 obj/kernel/kernel.o \
 $LINKFLAGS -o kernel.macho

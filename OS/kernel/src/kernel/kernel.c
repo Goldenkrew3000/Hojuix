@@ -22,6 +22,11 @@
 #include <kernel/memory/vmmgr.h>
 #include <kernel_ext/limine.h>
 #include <kernel/drivers/rs232.h>
+#include <kernel/drivers/ata_pio.h>
+#include <kernel/fs/fat16.h>
+
+extern uint8_t* i386_kern_memset();
+extern uint8_t* usermode();
 
 // Set the limine base revision to 2 (Latest)
 __attribute__((used, section(".requests")))
@@ -75,6 +80,10 @@ static volatile LIMINE_REQUESTS_END_MARKER;
 // Create Global Kernel Data Storage
 kernel_t kerndata = {0};
 
+void lala() { return; }
+void user_entry();
+void kernel_test();
+
 void kernel_entry(void) {
     // Disable interrupts
     asm volatile("cli");
@@ -92,9 +101,10 @@ void kernel_entry(void) {
 
     // Initialize the Memory Managers
     pmmgr_init();
-    //fake_stub_a();
     vmmgr_init();
-    vmmgr_switch_structures();
+    vmmgr_switch_cr3();
+    i386_kern_memset((uint8_t*)KERNEL_STACK_ADDR, 0x00, 4096 * 16); // Zero stack now that it is mapped
+    vmmgr_switch_stack(); // Switch to new stack at 0xfffffffffffff000
 
     // Ensure we have got a framebuffer
     if (framebuffer_request.response == NULL || framebuffer_request.response->framebuffer_count < 1) {
@@ -106,11 +116,12 @@ void kernel_entry(void) {
     }
 
     // Fetch the first framebuffer
-    struct limine_framebuffer *framebuffer = framebuffer_request.response->framebuffers[0];
+    struct limine_framebuffer *framebuffer = NULL;
+    framebuffer = framebuffer_request.response->framebuffers[0];
 
     // Init framebuffer
     framebuffer_ssfn_init(framebuffer);
-    framebuffer_fill_background(0x000080);
+    framebuffer_fill_background(0x000000);
 
     // Make first prints to the framebuffer
     printf("HOJUIX 0.4A (KMode Paging) x86_64 - Build Time: %s %s\n", __DATE__, __TIME__);
@@ -169,8 +180,35 @@ void kernel_entry(void) {
     //struct t_pci_device *pci_device_a = (struct t_pci_device*)(kerndata.pci_devices_addr + (uint64_t)(0x9 * 1));
     //printf("Device Vendor: %x\n", pci_device_a->device_id);
 
+    ata_pio_init();
+    fat16_fs_test();
+
+
+    // USERSPACE!!
+    /*
+    asm volatile("cli");
+    printf("Boo! Surprise usermode test!!!! Hope u studied :3\n");
+    vmmgr_map_usermode();
+    printf("hmmm");
+    lala();
+    //asm volatile("call *%0\n" : )
+    //uint8_t* function
+    printf("GHAHAHA\n");
+    kernel_test(0x6000000000);
+    printf("Attempting to execute usermode code...\n");
+    usermode(0x6000000000, 0x700000000000);
+
+    printf("FAIL");
+    user_entry();
+    */
+
     // Halt kernel, but in a running state
     printf("[KERNEL] Reached end of kernel.\n");
     while(1) { }
     asm volatile("cli; hlt");
+}
+
+__attribute__((section(".user.text")))
+void user_entry() {
+    asm volatile("movabs $0x4141414141414141, %r14");
 }

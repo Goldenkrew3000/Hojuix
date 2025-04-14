@@ -9,7 +9,8 @@ obj/kernel/kernel.o: src/kernel/kernel.c ../common/stdint.h \
  src/include/kernel/drivers/pit_timer.h \
  src/include/kernel/drivers/framebuffer.h \
  src/include/kernel/drivers/acpi.h src/include/kernel/memory/pmmgr.h \
- src/include/kernel/memory/vmmgr.h src/include/kernel/drivers/rs232.h
+ src/include/kernel/memory/vmmgr.h src/include/kernel/drivers/rs232.h \
+ src/include/kernel/drivers/ata_pio.h src/include/kernel/fs/fat16.h
 ../common/stdint.h:
 ../common/stdbool.h:
 ../common/stddef.h:
@@ -32,3 +33,5 @@ src/include/kernel/drivers/acpi.h:
 src/include/kernel/memory/pmmgr.h:
 src/include/kernel/memory/vmmgr.h:
 src/include/kernel/drivers/rs232.h:
+src/include/kernel/drivers/ata_pio.h:
+src/include/kernel/fs/fat16.h:
