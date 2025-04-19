@@ -18,7 +18,7 @@ void gdt_init() {
     // Allocate a block from memory for the GDT / TSS
     //uint64_t* gdt_content = (uint64_t*)((uint64_t)pmmgr_kmalloc(1) + ((uint64_t)kerndata.hhdm_offset));
 
-    vmmgr_kalloc_page(0xa0000000000); // Virtually map a page at 0xfffe000000000000
+    vmmgr_kalloc_page(0xa0000000000, 1); // Virtually map a page at 0xfffe000000000000
     uint64_t* gdt_content = (uint64_t*)0xa0000000000; // Assign a uint64_t to 0xfffe000000000000
     memset((void*)gdt_content, 0x00, 4096); // Memset the page to 0x00
 

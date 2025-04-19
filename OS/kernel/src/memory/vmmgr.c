@@ -34,9 +34,9 @@ uint64_t kernel_end = (uint64_t)KERNEL_END_SYM;
 
 uintptr_t pml4_global;
 
-uintptr_t vmmgr_kalloc_page(uintptr_t virt_addr) {
+uintptr_t vmmgr_kalloc_page(uintptr_t virt_addr, int pages) {
     //uintptr_t page = (uintptr_t)pmmgr_kmalloc(1) + (uintptr_t)hhdm_off;
-    vmmgr_alloc_pages((uint64_t*)pml4_global, virt_addr, 1, KERNEL_PFLAG_PRESENT | KERNEL_PFLAG_WRITE);
+    vmmgr_alloc_pages((uint64_t*)pml4_global, virt_addr, pages, KERNEL_PFLAG_PRESENT | KERNEL_PFLAG_WRITE);
 }
 
 // INFO: This is used for debugging if a physical address (calculated to a virtual address) is on the TLB

@@ -91,7 +91,7 @@ void ata_pio_read(int lba, uintptr_t addr) { // Send zero'd virtual address
 
     while (!(in8(0x1F7) & 0x08));
 
-    printf("[ATA_PIO] Read LBA %d (%llx).\n", lba, addr);
+    //printf("[ATA_PIO] Read LBA %d (%llx).\n", lba, addr);
     uint16_t* ata_pio_data = (uint16_t*)addr;
     for (int i = 0; i < 256; i++) {
         ata_pio_data[i] = in16(ATA_PIO_PRIMARY_BASE);

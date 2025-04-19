@@ -177,8 +177,8 @@ void kernel_entry(void) {
     //struct t_pci_device *pci_device_a = (struct t_pci_device*)(kerndata.pci_devices_addr + (uint64_t)(0x9 * 1));
     //printf("Device Vendor: %x\n", pci_device_a->device_id);
 
-    //ata_pio_init();
-    //fat16_fs_test();
+    ata_pio_init();
+    fat16_fs_test();
 
 
     // USERSPACE!!
@@ -198,22 +198,20 @@ void kernel_entry(void) {
     printf("FAIL");
     user_entry();
     */
-    vmmgr_map_usermode();
-    //void (*user_code)() = (void(*)())0x6000000000;  // Where user code is mapped
-    void (*user_code)() = (void(*)())0x400000;
-    uint64_t user_stack = 0x700000000000;             // User stack location
-    uint64_t if_addr=0x200;
 
-    __asm__ volatile (
-        "mov %0, %%r14\n\t"   // User code address in R14
-        "mov %1, %%r15\n\t"   // User stack in R15
-        "call usermode2"
-        :: "r"(user_code), "r"(user_stack)
-        : "r14", "r15", "memory"
-    );
+    //vmmgr_map_usermode();
+    //void (*user_code)() = (void(*)())0x400000;
+    //uint64_t user_stack = 0x700000000000;             // User stack location
+    //uint64_t if_addr=0x200;
 
-    //usermode();
-    printf("Returned from userspace!!\n");
+    //__asm__ volatile (
+    //    "mov %0, %%r14\n\t"   // User code address in R14
+    //    "mov %1, %%r15\n\t"   // User stack in R15
+    //    "call usermode2"
+    //    :: "r"(user_code), "r"(user_stack)
+    //    : "r14", "r15", "memory"
+    //);
+    //printf("Returned from userspace!!\n");
 
     // Halt kernel, but in a running state
     printf("[KERNEL] Reached end of kernel.\n");

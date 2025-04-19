@@ -39,7 +39,7 @@ typedef struct {
     uint16_t create_time;
     uint16_t create_date;
     uint16_t last_accessed;
-    uint16_t first_cluster_hi;
+    uint16_t first_cluster_hi;              // Apparently not needed - FAT16 only uses 16-bit clusters
     uint16_t last_modify_time;
     uint16_t last_modify_date;
     uint16_t first_cluster_lo;
@@ -48,12 +48,21 @@ typedef struct {
 
 typedef struct {
     uint8_t order;
-    uint8_t info[31];
+    uint8_t info[31]; // TODO Fill out this
 
     DIR_83_t info83;
 } __attribute__((packed)) DIR_LFN_t; // FAT12/16/32 Directory (Long filename version)
 
+typedef struct {
+    char filename[8];
+    char file_extension[3];
+    uint16_t filesize;
+    uint16_t start_cluster;
+} fat16_file_t;
+
 void fat16_fs_test();
-void fat16_parse_bootsector();
+void fat16_parse_bootsector(uintptr_t addr);
+void fat16_read_root_directory();
+void fat16_read_file(uint16_t start_cluster, uint16_t filesize);
 
 #endif

@@ -2,6 +2,7 @@
 #define _VMMGR_H
 #include <kernel.h>
 #include <kernel_ext/limine.h>
+#include <stddef.h>
 
 #define PAGE_ALIGN_DOWN(addr) ((addr / 4096) * 4096)
 #define PAGE_ALIGN_UP(x) ((((x) + 4095) / 4096) * 4096)
@@ -48,7 +49,7 @@
 #define vmmgr_switch_cr3() \
     KERNEL_SWITCH_PAGE_TREE(kerndata.cr3);
 
-uintptr_t vmmgr_kalloc_page(uintptr_t virt_addr);
+uintptr_t vmmgr_kalloc_page(uintptr_t virt_addr, int pages);
 uintptr_t vmmgr_virt_to_phys_ext(uintptr_t virt_addr);
 void vmmgr_map_usermode();
 void vmmgr_init();
