@@ -1,1 +1,1 @@
-qemu-system-x86_64 -M q35 -m 8192 -drive if=pflash,unit=0,format=raw,file=qemu/ovmf-code-x86_64.fd,readonly=on -drive if=pflash,unit=1,format=raw,file=qemu/ovmf-vars-x86_64.fd -cdrom qemu/hojuix.iso -accel kvm
+qemu-system-x86_64 -M q35 -m 8192 -drive if=pflash,unit=0,format=raw,file=qemu/ovmf-code-x86_64.fd,readonly=on -drive if=pflash,unit=1,format=raw,file=qemu/ovmf-vars-x86_64.fd -cdrom qemu/hojuix.iso -drive file=qemu/hdd.img,if=ide,index=0,media=disk -accel kvm

@@ -1,13 +1,12 @@
 # 호주ix - A 64bit hobbyist OSDev project
 
-# Sub-Projects
-- OS - Hojuix for x86_64 (The main project)
-- PiOS - Experiments with OSDev on AArch64 (Specifically for Raspberry Pi 3/4, only used for referencing)
-- RiscV - My personal exploration into RiscV (RV64, abandoned)
+# NOTICE
+In the state that this project is in, PLEASE DO NOT use this as a reference for your own operating system.<br>
+It is a miracle that this codebase works at all.<br>
+This notice will be removed ONLY when I am confident that this would be a good resource to others.
 
 # Notes
 - Libk is currently built separate from the 64 bit kernel, but does not have to be moved
-- Going to port the Build System to CMake in the future
 
 # Done
 - GDT / IDT / ISR
@@ -30,19 +29,10 @@
 - PS/2 Mouse Driver (Not planning to do anything with it currently, but want support)
 - ELF Parser
 - Scheduling
-- Port a shell (Probably SH)
+- 'Port' a shell (Probably XV6's SH)
 - VFS
 - Allow the VMM to free memory (Can only allocate now lmao)
+- (MAYBE) Port build system to CMake
 
-# Funny things Todo
-- (Funny but going to do it): Native linux kexec support in terminal (Treat a vmlinuz file as an executable)
-
-# Personal Resources
-## C UINT Sizes
-https://educoder.tistory.com/entry/cc-int8t-uint8t-int16t-uint16t
-
-## Limine Spec
-https://github.com/limine-bootloader/limine/blob/v8.x/PROTOCOL.md
-
-## Great list of required things
-https://github.com/149segolte/x86_64-kernel
+# Funny list of things todo
+- Native linux kexec support in terminal (Treat a vmlinuz file as an executable)
