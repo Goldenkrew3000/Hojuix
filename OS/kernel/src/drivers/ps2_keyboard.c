@@ -59,10 +59,10 @@ char keyboard_scancode_conv(uint8_t scancode) {
 // PS/2 Keyboard IRQ Init
 void ps2_keyboard_init() {
     // Set the ISR Interrupt Handler Function
-    idt_assemble_entry(33, &irq_keyboard_handler, 0x8E, (struct idt_entry_t*)kerndata.idtr.offset);
+    //idt_assemble_entry(33, &irq_keyboard_handler, 0x8E, (struct idt_entry_t*)kerndata.idtr.offset);
 
     // Unmask the PS/2 Keyboard IRQ (IRQ 1)
-    irq_unmask(1);
+    //irq_unmask(1);
 }
 
 // PS/2 Keyboard IRQ Handler
@@ -173,7 +173,7 @@ void keyboard_capslock() {
     if (capslock_toggle) {
         // Turn off capslock
         capslock_toggle = false;
-        
+
         // Toggle bit 3 (Little endian)
         ledbyte ^= (1 << 2);
 

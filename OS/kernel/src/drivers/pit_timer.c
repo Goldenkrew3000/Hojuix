@@ -11,10 +11,10 @@ long PIT_timer_ticks = 0;
 
 void pit_timer_init() {
     // Set the ISR Interrupt Handler Function
-    idt_assemble_entry(32, &irq_pit_timer_handler, 0x8E, (struct idt_entry_t*)kerndata.idtr.offset);
+    //idt_assemble_entry(32, &irq_pit_timer_handler, 0x8E, (struct idt_entry_t*)kerndata.idtr.offset);
 
     // Unmask the PIT Timer IRQ (IRQ 0)
-    irq_unmask(0);
+    //irq_unmask(0);
 
     // Set timer to 100hz
     pit_timer_phase(100);

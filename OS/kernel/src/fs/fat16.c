@@ -77,4 +77,6 @@ void fat16_parse_bootsector(uintptr_t addr) {
         // Iterate 64 bytes to next file entry
         file_entry_addr += 0x40;
     }
+
+    // Fetch the FAT cluster chains
 }

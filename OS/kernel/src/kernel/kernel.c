@@ -27,6 +27,7 @@
 
 extern uint8_t* i386_kern_memset();
 extern uint8_t* usermode();
+extern void* usermode2();
 
 // Set the limine base revision to 2 (Latest)
 __attribute__((used, section(".requests")))
@@ -79,10 +80,6 @@ static volatile LIMINE_REQUESTS_END_MARKER;
 
 // Create Global Kernel Data Storage
 kernel_t kerndata = {0};
-
-void lala() { return; }
-void user_entry();
-void kernel_test();
 
 void kernel_entry(void) {
     // Disable interrupts
@@ -180,13 +177,13 @@ void kernel_entry(void) {
     //struct t_pci_device *pci_device_a = (struct t_pci_device*)(kerndata.pci_devices_addr + (uint64_t)(0x9 * 1));
     //printf("Device Vendor: %x\n", pci_device_a->device_id);
 
-    ata_pio_init();
-    fat16_fs_test();
+    //ata_pio_init();
+    //fat16_fs_test();
 
 
     // USERSPACE!!
-    /*
-    asm volatile("cli");
+
+    /*    asm volatile("cli");
     printf("Boo! Surprise usermode test!!!! Hope u studied :3\n");
     vmmgr_map_usermode();
     printf("hmmm");
@@ -194,21 +191,32 @@ void kernel_entry(void) {
     //asm volatile("call *%0\n" : )
     //uint8_t* function
     printf("GHAHAHA\n");
-    kernel_test(0x6000000000);
+    kernel_test(0xffff800001693000);
     printf("Attempting to execute usermode code...\n");
     usermode(0x6000000000, 0x700000000000);
 
     printf("FAIL");
     user_entry();
     */
+    vmmgr_map_usermode();
+    //void (*user_code)() = (void(*)())0x6000000000;  // Where user code is mapped
+    void (*user_code)() = (void(*)())0x400000;
+    uint64_t user_stack = 0x700000000000;             // User stack location
+    uint64_t if_addr=0x200;
+
+    __asm__ volatile (
+        "mov %0, %%r14\n\t"   // User code address in R14
+        "mov %1, %%r15\n\t"   // User stack in R15
+        "call usermode2"
+        :: "r"(user_code), "r"(user_stack)
+        : "r14", "r15", "memory"
+    );
+
+    //usermode();
+    printf("Returned from userspace!!\n");
 
     // Halt kernel, but in a running state
     printf("[KERNEL] Reached end of kernel.\n");
     while(1) { }
     asm volatile("cli; hlt");
-}
-
-__attribute__((section(".user.text")))
-void user_entry() {
-    asm volatile("movabs $0x4141414141414141, %r14");
 }

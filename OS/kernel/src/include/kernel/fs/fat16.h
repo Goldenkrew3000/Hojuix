@@ -31,9 +31,9 @@ typedef struct {
 } __attribute__((packed)) EBR_t; // Extended Boot Record (FAT16 compatible)
 
 typedef struct {
-    uint8_t filename[8];
-    uint8_t file_extension[3];
-    uint8_t attributes;
+    uint8_t filename[8];                    //
+    uint8_t file_extension[3];              //
+    uint8_t attributes;                     //
     uint8_t nt_reserved;
     uint8_t create_time_hundreth_second;
     uint16_t create_time;

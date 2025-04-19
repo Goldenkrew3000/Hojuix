@@ -50,17 +50,6 @@ SECTIONS
     kern_data_end_addr = .;
     KERNEL_END_SYM = .;
 
-    /* USERMODE TEST START */
-
-    __user_text_start = .;    /* Current location counter = start address */
-    .user.text : {
-        *(.user.text*)        /* Collect all user-mode code */
-    }
-    __user_text_end = .;      /* Set end address after the section */
-    . += CONSTANT(MAXPAGESIZE);
-
-    /* USERMODE TEST END */
-
     /DISCARD/ : {
         *(.eh_frame)
         *(.note .note.*)

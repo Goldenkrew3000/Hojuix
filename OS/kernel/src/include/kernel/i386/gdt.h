@@ -14,7 +14,8 @@ struct tss_t {
 
 void gdt_init();
 void tss_init();
-uint64_t gdt_assemble_entry(uint64_t base, uint64_t limit, uint64_t access, uint64_t flags);
-void gdt_assemble_tss(uint64_t* GDT, uint8_t index, uint64_t base, uint64_t limit, uint64_t access, uint64_t flags);
-
+//uint64_t gdt_assemble_entry(uint64_t base, uint64_t limit, uint64_t access, uint64_t flags);
+//void gdt_assemble_tss(uint64_t* GDT, uint8_t index, uint64_t base, uint64_t limit, uint64_t access, uint64_t flags);
+uint64_t create_gdt_entry(uint64_t base, uint64_t limit, uint64_t access, uint64_t flags);
+void create_system_segment_descriptor(uint64_t *GDT, uint8_t idx, uint64_t base, uint64_t limit, uint64_t access, uint64_t flags);
 #endif
