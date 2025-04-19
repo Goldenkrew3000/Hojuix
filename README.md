@@ -11,19 +11,30 @@
 
 # Done
 - GDT / IDT / ISR
-- Keyboard (Functional but needs more work) - WIP (Interrupt masking needs fixing)
+- Keyboard (Functional but needs more work)
 - Framebuffer (Not double-buffered, yet)
 - PIT Timer (@ 100hz)
 - Physical Memory Manager
-- Virtual Memory Manager (4 Level Paging) - WIP (Very high addresses don't seem to affect the TLB)
+- Virtual Memory Manager (4 Level Paging) - WIP (Weird things happen with some addresses and not affecting the TLB)
 - Basic RS232 Driver - WIP (Works on real hardware... sometimes)
+
+# WIP
+- Usermode! Works (Can execute ASM and C programs), but cannot return after finishing (no exit syscall) and syscalls are funky
+- Fix new interrupt handler (Assembly based to handle interrupt driven syscalls)
+- Add new masking method for PS/2 Keyboard and PIT
+- Finish ATA PIO driver
+- FAT16 support
 
 # Todo
 - Completed Keyboard Driver
 - PS/2 Mouse Driver (Not planning to do anything with it currently, but want support)
 - ELF Parser
 - Scheduling
-- USERMODE!!!
+- Port a shell (Probably SH)
+- VFS
+- Allow the VMM to free memory (Can only allocate now lmao)
+
+# Funny things Todo
 - (Funny but going to do it): Native linux kexec support in terminal (Treat a vmlinuz file as an executable)
 
 # Personal Resources
