@@ -24,6 +24,7 @@
 #include <kernel/drivers/rs232.h>
 #include <kernel/drivers/ata_pio.h>
 #include <kernel/fs/fat16.h>
+#include <kernel/process/elf.h>
 
 extern uint8_t* i386_kern_memset();
 extern uint8_t* usermode();
@@ -180,6 +181,21 @@ void kernel_entry(void) {
     ata_pio_init();
     fat16_fs_test();
 
+    vmmgr_map_usermode(); // Prepare the stack and the exec page
+    elf_prepare(0x9010000000); // Hardcoded address from the fat16 driver
+    void (*user_code)() = (void(*)())0x400000;
+    uint64_t user_stack = 0x700000000000;
+    uint64_t if_addr=0x200;
+
+    printf("\n");
+    __asm__ volatile (
+        "mov %0, %%r14\n\t"   // User code address in R14
+        "mov %1, %%r15\n\t"   // User stack in R15
+        "call usermode2"
+        :: "r"(user_code), "r"(user_stack)
+        : "r14", "r15", "memory"
+    );
+    printf("\n");
 
     // USERSPACE!!
 

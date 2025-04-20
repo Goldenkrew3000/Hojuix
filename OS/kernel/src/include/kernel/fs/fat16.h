@@ -58,7 +58,7 @@ typedef struct {
     char file_extension[3];
     uint16_t filesize;
     uint16_t start_cluster;
-} fat16_file_t;
+} fat16_file_t; // Files found in the filesystem
 
 void fat16_fs_test();
 void fat16_parse_bootsector(uintptr_t addr);

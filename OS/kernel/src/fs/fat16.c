@@ -44,7 +44,7 @@ void fat16_parse_bootsector(uintptr_t addr) {
     bpb = (BPB_t*)addr;
     printf("[BPB] Made with '%.8s'\n", bpb->oem_identifier);
 
-    // Read the EBR
+    // Read the EBR (Extended Boot Record)
     ebr = (EBR_t*)(addr + 0x24); // EBR is offset by 36 bytes
     printf("[EBR] Filesystem is '%.5s', Bootable: ", ebr->system_identifier);
     if (ebr->boot_signature == 0xAA55) {
