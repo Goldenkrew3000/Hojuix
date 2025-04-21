@@ -36,3 +36,14 @@ This notice will be removed ONLY when I am confident that this would be a good r
 
 # Funny list of things todo
 - Native linux kexec support in terminal (Treat a vmlinuz file as an executable)
+
+# List of bugs/issues to fix
+- Clean up the PMMGR (And fix the slow allocation speed on 12th gen Intel)
+- Rewrite the VMMGR
+- Add a way to free virtual memory
+- Add a way for the VMMGR to allocate memory and send a random address back in a range
+- Properly implement the new interrupt handler
+- Switch syscall handler from interrupt based to 'syscall' instruction way
+- Actually add a proper list of syscalls instead of whatever the hell I have now (Base it off of 4.4BSD maybe)
+- Move assembler functions to the correct files in the ```i386``` directory
+- Add a way to the new interrupt handler to allow interrupt devices (PS/2 Keyboard, etc)
