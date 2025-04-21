@@ -169,7 +169,7 @@ common_interrupt_handler:
     push %r14
     push %r15
 
-	cld
+	cld # Clears the 'direction' flag
 	mov %rsp, %rdi
 	xor %rbp, %rbp
 	call isr_handle
@@ -192,6 +192,7 @@ common_interrupt_handler:
     pop %rax
 
     add $24, %rsp
+    #add $16, %rsp
 	iretq
 
 .global syscall_handler_asm

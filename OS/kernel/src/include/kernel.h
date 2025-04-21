@@ -4,6 +4,8 @@
 #include <kernel/i386/idt.h>
 #include <kernel/drivers/pci.h>
 
+void kernel_finished();
+
 typedef struct {
     // Info from Limine
     struct limine_memmap_response memmap;
@@ -20,14 +22,14 @@ typedef struct {
     // PCI
     uint64_t pci_devices_addr;
     int pci_device_count;
-    
+
     // Memory Management (PMM / VMM) Info
     long last_freed_page;
     long last_freed_section;
     uint64_t last_freed_num_pages;
     uintptr_t kernheap_start;
     uint64_t cr3; // Physical PML4 CR3
-   
+
     // Debugging
     int debug_port;
 } kernel_t;

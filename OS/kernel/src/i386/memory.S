@@ -79,18 +79,5 @@ usermode2:
     pushq $0x1b       /* CS (user code segment - GDT entry 0x18 | 0x3) */
     pushq %r14        /* Instruction pointer (passed in R14) */
 
-
-    # Clean R8-R15 for syscalls (gotta think of a better method lmfao)
-    #xor %r8, %r8
-    #xor %r9, %r9
-    #xor %r10, %r10
-    #xor %r11, %r11
-    #xor %r12, %r12
-    #xor %r13, %r13
-    #xor %r14, %r14
-    #xor %r15, %r15
-    #xor %rbx, %rbx
-    #xor %rcx, %rcx
-
     /* 3. Perform the mode switch */
     iretq

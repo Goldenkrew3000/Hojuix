@@ -44,6 +44,7 @@ $CC $CFLAGS $LINK $INCL -MMD -MP -c src/memory/vmmgr.c -o obj/memory/vmmgr.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/fs/fat16.c -o obj/fs/fat16.o
 
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/process/syscall.c -o obj/process/syscall.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/process/elf.c -o obj/process/elf.o
 
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/kernel/cc-runtime.c -o obj/kernel/cc-runtime.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/kernel/kernel.c -o obj/kernel/kernel.o
@@ -73,6 +74,7 @@ obj/memory/pmmgr.o \
 obj/memory/vmmgr.o \
 obj/fs/fat16.o \
 obj/process/syscall.o \
+obj/process/elf.o \
 obj/kernel/cc-runtime.o \
 obj/kernel/kernel.o \
 $LINKFLAGS -o kernel.macho

@@ -107,6 +107,7 @@ void fat16_read_file(uint16_t start_cluster, uint16_t filesize) {
     uintptr_t file_virtual_addr = 0x9010000000;
     vmmgr_kalloc_page(file_virtual_addr, PAGE_ALIGN_UP(filesize) / 4096);
     i386_kern_memset((uint8_t*)file_virtual_addr, 0x00, PAGE_ALIGN_UP(filesize) / 4096);
+    // WOAH WOAH TODO HOLY FUCK IM NOT ZEROING THE PAGE CORRECTLY!!!! HOL UP TOO SMALL
     printf("[FAT16] Reading file of %d bytes to 0x%llx\n", filesize, file_virtual_addr);
 
     // Calculate what sector the file's data starts in

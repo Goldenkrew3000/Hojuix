@@ -26,7 +26,8 @@
 #include <kernel/fs/fat16.h>
 #include <kernel/process/elf.h>
 
-extern uint8_t* i386_kern_memset();
+extern void* i386_kern_memset();
+extern void* i386_kern_memcpy();
 extern uint8_t* usermode();
 extern void* usermode2();
 
@@ -178,8 +179,8 @@ void kernel_entry(void) {
     //struct t_pci_device *pci_device_a = (struct t_pci_device*)(kerndata.pci_devices_addr + (uint64_t)(0x9 * 1));
     //printf("Device Vendor: %x\n", pci_device_a->device_id);
 
-    ata_pio_init();
-    fat16_fs_test();
+    //ata_pio_init();
+    //fat16_fs_test();
 
     vmmgr_map_usermode(); // Prepare the stack and the exec page
     elf_prepare(0x9010000000); // Hardcoded address from the fat16 driver
@@ -230,6 +231,10 @@ void kernel_entry(void) {
     //printf("Returned from userspace!!\n");
 
     // Halt kernel, but in a running state
+    kernel_finished();
+}
+
+void kernel_finished() {
     printf("[KERNEL] Reached end of kernel.\n");
     while(1) { }
     asm volatile("cli; hlt");
