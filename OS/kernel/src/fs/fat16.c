@@ -9,12 +9,12 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
-#include <kernel/fs/fat16.h>
-#include <kernel/drivers/ata_pio.h>
-#include <kernel/memory/pmmgr.h>
-#include <kernel/memory/vmmgr.h>
+#include <fs/fat16.h>
+#include <drivers/ata_pio.h>
+#include <memory/pmmgr.h>
+#include <memory/vmmgr.h>
+#include <i386/asm_functions.h>
 
-extern void* i386_kern_memset(); // Fix this eventually
 #define DIV_ROUND_UP(a, b) (((a) + (b) - 1) / (b))
 
 BPB_t* bpb = NULL;
@@ -25,18 +25,37 @@ int data_start_sector = 0;
 int root_dir_items = 0;
 fat16_file_t files[32]; // Support 32 files
 
+int fat16_strncmp(const char *s1, const char *s2, size_t n) // Not at all compliant strncmp implementation
+{
+    for (size_t i = 0; i < n; i++) {
+        if (s1[i] != s2[i]) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+
 void fat16_fs_test() {
     printf("[FAT16] Reading LBA 0 from disk.\n");
 
     uintptr_t lba0 = (uintptr_t)pmmgr_kmalloc(1); // 4KB for 512 bytes is wasteful, I know, but i havent got a slab alloc yet
     lba0 += 0xFFFF800000000000; // Add VMMGR Identity Map offset
-    i386_kern_memset((uint8_t*)lba0, 0x00, 4096);
+    i386_memset((uint8_t*)lba0, 0x00, 4096);
     ata_pio_read(0, lba0);
     printf("[FAT16] Raw bootsector at %llx.\n", lba0);
 
     fat16_parse_bootsector(lba0);
     fat16_read_root_directory();
-    fat16_read_file(files[2].start_cluster, files[2].filesize);
+
+    // Find the file SHELL.ELF file (Files are spaced out to 8 characters for FAT16)
+    for (size_t i = 0; i < root_dir_items; i++) {
+        if (fat16_strncmp(files[i].filename, "SHELL   ", 8) == 0) {
+            if (fat16_strncmp(files[i].file_extension, "ELF", 3) == 0) {
+                fat16_read_file(files[i].start_cluster, files[i].filesize);
+            }
+        }
+    }
 }
 
 void fat16_parse_bootsector(uintptr_t addr) {
@@ -65,7 +84,7 @@ void fat16_read_root_directory() {
     // Allocate memory for the root directory
     uintptr_t root_dir_virtual_addr = 0x9000000000;
     vmmgr_kalloc_page(root_dir_virtual_addr, root_dir_size_sectors / (4096 / bpb->bytes_per_sector));
-    i386_kern_memset((uint8_t*)root_dir_virtual_addr, 0x00, root_dir_size_sectors * bpb->bytes_per_sector);
+    i386_memset((uint8_t*)root_dir_virtual_addr, 0x00, root_dir_size_sectors * bpb->bytes_per_sector);
 
     // Read in the root directory
     for (size_t i = 0; i < root_dir_size_sectors; i++) {
@@ -92,8 +111,8 @@ void fat16_read_root_directory() {
         printf("File %d: %.8s . %.3s | File size: %d bytes\n", i + 1, file_entry->info83.filename, file_entry->info83.file_extension, file_entry->info83.filesize);
 
         // Add info to the file array
-        memcpy(files[i].filename, file_entry->info83.filename, 8);
-        memcpy(files[i].file_extension, file_entry->info83.file_extension, 3);
+        i386_memcpy(files[i].filename, file_entry->info83.filename, 8);
+        i386_memcpy(files[i].file_extension, file_entry->info83.file_extension, 3);
         files[i].filesize = file_entry->info83.filesize;
         files[i].start_cluster = file_entry->info83.first_cluster_lo;
 
@@ -106,7 +125,7 @@ void fat16_read_file(uint16_t start_cluster, uint16_t filesize) {
     // Allocate memory for the file
     uintptr_t file_virtual_addr = 0x9010000000;
     vmmgr_kalloc_page(file_virtual_addr, PAGE_ALIGN_UP(filesize) / 4096);
-    i386_kern_memset((uint8_t*)file_virtual_addr, 0x00, PAGE_ALIGN_UP(filesize) / 4096);
+    i386_memset((uint8_t*)file_virtual_addr, 0x00, PAGE_ALIGN_UP(filesize) / 4096);
     // WOAH WOAH TODO HOLY FUCK IM NOT ZEROING THE PAGE CORRECTLY!!!! HOL UP TOO SMALL
     printf("[FAT16] Reading file of %d bytes to 0x%llx\n", filesize, file_virtual_addr);
 

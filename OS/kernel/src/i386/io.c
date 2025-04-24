@@ -1,7 +1,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <kernel/i386/io.h>
+#include <i386/io.h>
 
 // TODO Refactor to look more sensible tbh
 

@@ -4,10 +4,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <kernel/drivers/acpi.h>
+#include <drivers/acpi.h>
+#include <i386/io.h>
+#include <memory/vmmgr.h>
 #include <kernel_ext/limine.h>
-
-#include <kernel/memory/vmmgr.h>
 
 /*
 // ACPI Notes
@@ -134,6 +134,7 @@ typedef struct {
     GenericAddressStructure_t x_gpe0_block;
     GenericAddressStructure_t x_gpe1_block;
 } __attribute__((packed)) FADT_t;
+FADT_t* fadt;
 
 void acpi_init() {
     printf("Initializing ACPI...\n");
@@ -147,7 +148,7 @@ void acpi_init() {
     // Check RSDP for the ACPI version
     if (rsdp->revision == 0) {
         printf("Your system is using ACPI 1.0, which is not supported.\n");
-        abort();
+        // TODO Abort here
     } else if (rsdp->revision == 2) {
         printf("ACPI 2.0 - 6.1 detected.\n");
         // In ACPI 2.0+, the XSDP is used instead of the RSDP
@@ -215,13 +216,10 @@ void acpi_handle_xsdt() {
     }
 }
 
-#include <kernel/i386/io.h>
-#include <kernel/drivers/pit_timer.h>
-
 void acpi_handle_fadt() {
     // Load the FADT pointer into the FADT struct
     //uint64_t* fadt_addr = (uint64_t*)fadt_table_addr; // NOTE: Offset already applied from above
-    FADT_t* fadt = (FADT_t*)fadt_table_addr;
+    fadt = (FADT_t*)fadt_table_addr;
 
     /*
     printf("FADT sig: %p\n", fadt->reset_reg.address);
@@ -233,4 +231,12 @@ void acpi_handle_fadt() {
     timer_wait(5000);
     out8(reset_reg_final, fadt->reset_value);
     */
+}
+
+void acpi_shutdown() { // TODO Not working...
+    // Perform ACPI shutdown (Issued from SYS_SHUTDOWN)
+    printf("[ACPI] Performing ACPI Shutdown...\n");
+    uintptr_t reset_reg_final = (uintptr_t)fadt->reset_reg.address + hhdt_offset;
+    out8(reset_reg_final, fadt->reset_value);
+    asm volatile("cli; hlt;");
 }

@@ -14,8 +14,6 @@ SECTIONS
 {
     . = 0xffffffff80000000;
 
-    KERNEL_START_SYM = .;
-
     kern_text_start_addr = .;
     .text : {
         *(.text .text.*)
@@ -32,8 +30,6 @@ SECTIONS
 
     . += CONSTANT(MAXPAGESIZE);
 
-    KERNEL_WRITE_SYM = .;
-
     kern_data_start_addr = .;
     .data : {
         *(.data .data.*)
@@ -48,7 +44,6 @@ SECTIONS
         *(COMMON)
     } :data
     kern_data_end_addr = .;
-    KERNEL_END_SYM = .;
 
     /DISCARD/ : {
         *(.eh_frame)

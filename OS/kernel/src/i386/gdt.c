@@ -5,14 +5,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <kernel.h>
-#include <kernel/i386/gdt.h>
-#include <kernel/memory/pmmgr.h>
-#include <kernel/memory/vmmgr.h>
+#include <i386/gdt.h>
+#include <memory/pmmgr.h>
+#include <memory/vmmgr.h>
+#include <i386/asm_functions.h>
 
 struct gdtr_t gdtr;
 struct tss_t tss;
-
-extern void gdt_apply(); // GDTR is passed in %RDI
 
 void gdt_init() {
     // Allocate a block from memory for the GDT / TSS
@@ -20,7 +19,7 @@ void gdt_init() {
 
     vmmgr_kalloc_page(0xa0000000000, 1); // Virtually map a page at 0xfffe000000000000
     uint64_t* gdt_content = (uint64_t*)0xa0000000000; // Assign a uint64_t to 0xfffe000000000000
-    memset((void*)gdt_content, 0x00, 4096); // Memset the page to 0x00
+    i386_memset((void*)gdt_content, 0x00, 4096); // Memset the page to 0x00
 
     // Assemble the GDT
     //gdt_content[0] = gdt_assemble_entry(0, 0, 0, 0);

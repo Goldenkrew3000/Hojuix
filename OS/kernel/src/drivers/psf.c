@@ -1,4 +1,4 @@
-#include <kernel/drivers/psf.h>
+#include <drivers/psf.h>
 
 #define PSF1_FONT_MAGIC 0x0436
 #define PSF_FONT_MAGIC 0x864ab572

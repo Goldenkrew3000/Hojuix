@@ -4,5 +4,6 @@
 void acpi_init();
 void acpi_handle_xsdt();
 void acpi_handle_fadt();
+void acpi_shutdown();
 
 #endif

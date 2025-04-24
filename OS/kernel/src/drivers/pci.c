@@ -5,9 +5,10 @@
 #include <string.h>
 #include <stdlib.h>
 #include <kernel.h>
-#include <kernel/i386/io.h>
-#include <kernel/drivers/pci.h>
-#include <kernel/memory/pmmgr.h>
+#include <i386/io.h>
+#include <drivers/pci.h>
+#include <memory/pmmgr.h>
+#include <i386/asm_functions.h>
 
 #define PCI_CONFIG_ADDR 0xCF8
 #define PCI_CONFIG_DATA 0xCFC
@@ -42,9 +43,9 @@ void pci_init() {
                     pci_device.function = k;
 
                     // Memcpy the data from the struct to the allocated block, with the correct index offset (Struct is 72 bits, or 9 bytes), and iterate the index
-                    memcpy((uint64_t*)((uint64_t)pci_device_table_addr + (uint64_t)(0x9 * index)), &pci_device, sizeof(struct t_pci_device));
+                    i386_memcpy((uint64_t*)((uint64_t)pci_device_table_addr + (uint64_t)(0x9 * index)), &pci_device, sizeof(struct t_pci_device));
                     index++;
-                    
+
                     printf("PCI Device %04X:", vendor);
                     printf("%04X [", device);
                     printf("%04X] found. (Bus ", class_id);

@@ -1,9 +1,8 @@
-#include <kernel/drivers/ata_pio.h>
-#include <kernel/i386/io.h>
-#include <kernel/memory/pmmgr.h>
+#include <drivers/ata_pio.h>
+#include <i386/io.h>
+#include <memory/pmmgr.h>
+#include <i386/asm_functions.h>
 #include <stdio.h>
-
-extern uint8_t* i386_kern_memset();
 
 void ata_pio_init() {
     printf("[ATA_PIO] Running Sequence...\n");
@@ -35,7 +34,7 @@ void ata_pio_init() {
 
     // Now (as long as ERR (bit 0) is not set TODO), read 256 16bit values from the DATA (Base) port
     uintptr_t ata_pio_identify_data_ptr = (uintptr_t)pmmgr_kmalloc(1);
-    i386_kern_memset((uint8_t*)ata_pio_identify_data_ptr + 0xFFFF800000000000, 0x00, 4096);
+    i386_memset((uint8_t*)ata_pio_identify_data_ptr + 0xFFFF800000000000, 0x00, 4096);
     printf("[ATA_PIO] IDENTIFY returned data: %llx\n", ata_pio_identify_data_ptr + 0xFFFF800000000000);
     uint16_t* ata_pio_identify_data = (uint16_t*)(ata_pio_identify_data_ptr + 0xFFFF800000000000);
     for (int i = 0; i < 256; i++) {

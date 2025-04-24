@@ -1,8 +1,8 @@
 #ifndef _KERNEL_H
 #define _KERNEL_H
+#include <i386/idt.h>
+#include <drivers/pci.h>
 #include <kernel_ext/limine.h>
-#include <kernel/i386/idt.h>
-#include <kernel/drivers/pci.h>
 
 void kernel_finished();
 

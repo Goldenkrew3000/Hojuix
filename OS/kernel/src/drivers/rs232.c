@@ -5,10 +5,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <kernel.h>
-#include <kernel/i386/io.h>
-#include <kernel/i386/idt.h>
-#include <kernel/i386/irq.h>
-#include <kernel/drivers/rs232.h>
+#include <i386/io.h>
+#include <i386/idt.h>
+#include <i386/irq.h>
+#include <drivers/rs232.h>
 
 // TODO: Add a check to make sure that the UART port is initialized before trying to read / write to it. (Just probably a boolean for each)
 // TODO: Optimize the port to hex port conversion (Only really need to do it once, when the rest of the kernel interacts with the

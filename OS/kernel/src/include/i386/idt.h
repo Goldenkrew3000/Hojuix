@@ -45,21 +45,5 @@ typedef struct {
 void idt_init();
 void idt_assemble_entry(uint32_t vector, uint64_t isr, uint8_t flags, struct idt_entry_t* idt_entry);
 void isr_handle(registers_t *r);
-/*
-void isr_divideError(void*);
-void isr_debugException(void*);
-void isr_NMI(void*);
-void isr_breakpoint(void*);
-void isr_overflow(void*);
-void isr_boundaryRange(void*);
-void isr_undefinedOpcode(void*);
-void isr_deviceNotAvailable(void*);
-void isr_doubleFault(void*);
-void isr_invalidTSS(void*);
-void isr_notPresent(void*);
-void isr_stackSegment(void*);
-void isr_generalProtection(void*);
-void isr_pageFault(void*);
-*/
 
 #endif

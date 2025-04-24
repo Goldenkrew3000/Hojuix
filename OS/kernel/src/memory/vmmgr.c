@@ -1,12 +1,17 @@
+/*
+// Hojuix VMMGR v3
+*/
+
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <kernel.h>
-#include <kernel/memory/pmmgr.h>
-#include <kernel/memory/vmmgr.h>
-#include <kernel/drivers/rs232.h>
+#include <memory/pmmgr.h>
+#include <memory/vmmgr.h>
+#include <drivers/rs232.h>
+#include <i386/asm_functions.h>
 #include <kernel_ext/limine.h>
 
 extern char kern_text_start_addr[];
@@ -16,21 +21,7 @@ extern char kern_rodata_end_addr[];
 extern char kern_data_start_addr[];
 extern char kern_data_end_addr[];
 
-extern uint32_t* i386_kern_memset();
-
 uint64_t hhdm_off = 0xFFFF800000000000;
-
-// keep build happy
-//uint64_t kernel_start;
-//uint64_t writeallowed_start;
-//uint64_t kernel_end;
-
-extern uint64_t KERNEL_START_SYM[];
-extern uint64_t KERNEL_WRITE_SYM[];
-extern uint64_t KERNEL_END_SYM[];
-uint64_t kernel_start = (uint64_t)KERNEL_START_SYM;
-uint64_t writeallowed_start = (uint64_t)KERNEL_WRITE_SYM;
-uint64_t kernel_end = (uint64_t)KERNEL_END_SYM;
 
 uintptr_t pml4_global;
 
@@ -48,39 +39,30 @@ uintptr_t vmmgr_virt_to_phys_ext(uintptr_t virt_addr) {
 }
 
 
-
-
-
-
-
-
-//extern uint8_t _binary____usermode_test_start[], _binary____usermode_test_end[];
-extern uint8_t* i386_kern_memcpy();
-
 void vmmgr_map_usermode() {
     // Allocate and map usermode stack
-    vmmgr_alloc_pages((uint64_t*)pml4_global, USER_STACK_ADDR, 3, KERNEL_PFLAG_USER | KERNEL_PFLAG_PRESENT | KERNEL_PFLAG_WRITE);
+    vmmgr_alloc_pages((uint64_t*)pml4_global, USER_STACK_ADDR, USER_STACK_PAGES, KERNEL_PFLAG_USER | KERNEL_PFLAG_PRESENT | KERNEL_PFLAG_WRITE);
     printf("Mapped usermode stack\n");
 
 
     // Allocate a usermode data page
-    uintptr_t usermode_data_page = 0x6050000000;
-    vmmgr_alloc_pages((uint64_t*)pml4_global, usermode_data_page, 1, KERNEL_PFLAG_PRESENT | KERNEL_PFLAG_WRITE | KERNEL_PFLAG_USER);
+    uintptr_t usermode_data_page = 0x800000;
+    vmmgr_alloc_pages((uint64_t*)pml4_global, usermode_data_page, 8, KERNEL_PFLAG_PRESENT | KERNEL_PFLAG_WRITE | KERNEL_PFLAG_USER);
     printf("Mapped usermode data page\n");
 
     // Allocate a usermode executable page
     //uintptr_t usermode_exec_page = 0x6000000000;
     uintptr_t usermode_exec_page = 0x400000;
     //asm volatile("invlpg (%0)" : : "r" (usermode_exec_page) : "memory");
-    vmmgr_alloc_pages((uint64_t*)pml4_global, usermode_exec_page, 1, KERNEL_PFLAG_PRESENT | KERNEL_PFLAG_WRITE | KERNEL_PFLAG_USER); // USER as well
+    vmmgr_alloc_pages((uint64_t*)pml4_global, usermode_exec_page, 8, KERNEL_PFLAG_PRESENT | KERNEL_PFLAG_WRITE | KERNEL_PFLAG_USER); // USER as well
     //vmmgr_alloc_pages((uint64_t*)pml4_global, usermode_exec_page, 1, KERNEL_PFLAG_ALL);
     //usermode_exec_page = (uintptr_t)pmmgr_kmalloc(1);
     //printf("EXEC PAGE: %llx\n", usermode_exec_page);
     printf("Mapped usermode exec page\n");
 
     // Blank pages
-    i386_kern_memset((uint8_t*)usermode_data_page, 0x00, 4096);
-    i386_kern_memset((uint8_t*)usermode_exec_page, 0x00, 4096);
+    i386_memset((uint8_t*)usermode_data_page, 0x00, 4096);
+    i386_memset((uint8_t*)usermode_exec_page, 0x00, 4096);
 
     // Copy usermode test program from kernel mapped pages into the user exec page
     // NOTE: This all seems to match up (bytes wise) to the objdump version
@@ -103,11 +85,6 @@ void vmmgr_map_usermode() {
 }
 
 
-
-void bp() {return;}
-
-
-
 void vmmgr_init() {
     //printf("[VMMGR] Initializing...\n");
     //rs232_writeline(1, "[VMMGR] Initializing...\r\n");
@@ -117,7 +94,7 @@ void vmmgr_init() {
     pml4_global = pml4_virt;
     //memset((void*)pml4_virt, 0x00, 4096);
     //kern_memset((uint8_t*)pml4_virt, 0, 4096);
-    i386_kern_memset((void*)pml4_virt, 0x00, 4096);
+    i386_memset((void*)pml4_virt, 0x00, 4096);
 
     vmmgr_map_all((uint64_t*)pml4_virt);
     kerndata.cr3 = pml4_virt - kerndata.hhdm_offset;
@@ -175,7 +152,7 @@ void vmmgr_write_vmem(uint64_t *pml4_addr, uint64_t virt_addr, char *data, size_
         }
         kernel_addr += kerndata.hhdm_offset;
         uint64_t bytes_to_copy = (len < PAGE_SIZE) ? len : PAGE_SIZE;
-        kern_memcpy((char*) kernel_addr, data, bytes_to_copy);
+        i386_memcpy((char*) kernel_addr, data, bytes_to_copy);
         len -= bytes_to_copy;
         virt_addr += bytes_to_copy;
         data += bytes_to_copy;
@@ -199,8 +176,7 @@ void vmmgr_map_pages(uint64_t pml4_addr[], uint64_t virt_addr, uint64_t phys_add
         if (pml4_addr[pml4] == 0) {
             pml4_addr[pml4] = (uint64_t)pmmgr_kmalloc(1);
             pml3_addr = (uint64_t*)(pml4_addr[pml4] + kerndata.hhdm_offset);
-            i386_kern_memset((uint8_t*)pml3_addr, 0x00, 4096);
-            bp();
+            i386_memset((uint8_t*)pml3_addr, 0x00, 4096);
             //pml4_addr[pml4] |= KERNEL_PFLAG_ALL;
             pml4_addr[pml4] |= flags | KERNEL_PFLAG_PRESENT | KERNEL_PFLAG_WRITE | KERNEL_PFLAG_USER;
         } else {
@@ -212,7 +188,7 @@ void vmmgr_map_pages(uint64_t pml4_addr[], uint64_t virt_addr, uint64_t phys_add
             if (pml3_addr[pml3] == 0) {
                 pml3_addr[pml3] = (uint64_t)pmmgr_kmalloc(1);
                 pml2_addr = (uint64_t*)(pml3_addr[pml3] + kerndata.hhdm_offset);
-                i386_kern_memset((uint8_t*)pml2_addr, 0x00, 4096);
+                i386_memset((uint8_t*)pml2_addr, 0x00, 4096);
                 //pml3_addr[pml3] |= KERNEL_PFLAG_ALL;
                 pml3_addr[pml3] |= flags | KERNEL_PFLAG_PRESENT | KERNEL_PFLAG_WRITE | KERNEL_PFLAG_USER;
             } else {
@@ -224,7 +200,7 @@ void vmmgr_map_pages(uint64_t pml4_addr[], uint64_t virt_addr, uint64_t phys_add
                 if (pml2_addr[pml2] == 0) {
                     pml2_addr[pml2] = (uint64_t)pmmgr_kmalloc(1);
                     pml1_addr = (uint64_t*)(pml2_addr[pml2] + kerndata.hhdm_offset);
-                    i386_kern_memset((uint8_t*)pml1_addr, 0x00, 4096);
+                    i386_memset((uint8_t*)pml1_addr, 0x00, 4096);
                     //pml2_addr[pml2] |= KERNEL_PFLAG_ALL;
                     pml2_addr[pml2] |= flags | KERNEL_PFLAG_PRESENT | KERNEL_PFLAG_WRITE | KERNEL_PFLAG_USER;
                 } else {
@@ -257,7 +233,7 @@ void vmmgr_alloc_pages(uint64_t pml4_addr[], uint64_t virt_addr, uint64_t num_pa
         if (pml4_addr[pml4] == 0) {
             pml4_addr[pml4] = (uint64_t)pmmgr_kmalloc(1);
             pml3_addr = (uint64_t*)(pml4_addr[pml4] + kerndata.hhdm_offset);
-            i386_kern_memset((uint8_t*)pml3_addr, 0x00, 4096);
+            i386_memset((uint8_t*)pml3_addr, 0x00, 4096);
             //pml4_addr[pml4] |= KERNEL_PFLAG_ALL;
             pml4_addr[pml4] |= flags | KERNEL_PFLAG_PRESENT | KERNEL_PFLAG_WRITE | KERNEL_PFLAG_USER;
         } else {
@@ -268,7 +244,7 @@ void vmmgr_alloc_pages(uint64_t pml4_addr[], uint64_t virt_addr, uint64_t num_pa
             if (pml3_addr[pml3] == 0) {
                 pml3_addr[pml3] = (uint64_t)pmmgr_kmalloc(1);
                 pml2_addr = (uint64_t*)(pml3_addr[pml3] + kerndata.hhdm_offset);
-                i386_kern_memset((uint8_t*)pml2_addr, 0x00, 4096);
+                i386_memset((uint8_t*)pml2_addr, 0x00, 4096);
                 //pml3_addr[pml3] |= KERNEL_PFLAG_ALL;
                 pml3_addr[pml3] |= flags | KERNEL_PFLAG_PRESENT | KERNEL_PFLAG_WRITE | KERNEL_PFLAG_USER;
             } else {
@@ -280,7 +256,7 @@ void vmmgr_alloc_pages(uint64_t pml4_addr[], uint64_t virt_addr, uint64_t num_pa
                 if (pml2_addr[pml2] == 0) {
                     pml2_addr[pml2] = (uint64_t)pmmgr_kmalloc(1);
                     pml1_addr = (uint64_t*)(pml2_addr[pml2] + kerndata.hhdm_offset);
-                    i386_kern_memset((uint8_t*)pml1_addr, 0x00, 4096);
+                    i386_memset((uint8_t*)pml1_addr, 0x00, 4096);
                     //pml2_addr[pml2] |= KERNEL_PFLAG_ALL;
                     pml2_addr[pml2] |= flags | KERNEL_PFLAG_PRESENT | KERNEL_PFLAG_WRITE | KERNEL_PFLAG_USER;
                 } else {
@@ -330,67 +306,35 @@ void vmmgr_map_sections(uint64_t pml4[]) {
 }
 
 void vmmgr_map_kernel(uint64_t pml4[]) {
-    //printf("Kernel Phys Start: %llx\n", kerndata.kernel_addr.physical_base);
-    //printf("Kernel Virt Start: %llx\n", kerndata.kernel_addr.virtual_base);
-    //printf("Kern page align down: %llx\n", PAGE_ALIGN_DOWN(kernel_start));
+    // Fetch kernel section starts and ends from the linker
+    uintptr_t kern_text_start = PAGE_ALIGN_DOWN((uintptr_t)kern_text_start_addr);
+    uintptr_t kern_rodata_start = PAGE_ALIGN_DOWN((uintptr_t)kern_rodata_start_addr);
+	uintptr_t kern_data_start = PAGE_ALIGN_DOWN((uintptr_t)kern_data_start_addr);
+	uintptr_t kern_text_end = PAGE_ALIGN_UP((uintptr_t)kern_text_end_addr);
+	uintptr_t kern_rodata_end = PAGE_ALIGN_UP((uintptr_t)kern_rodata_end_addr);
+	uintptr_t kern_data_end = PAGE_ALIGN_UP((uintptr_t)kern_data_end_addr);
 
-    /*
-    uint64_t length_buffer = 0;
-    uint64_t phys_buffer = 0;
-    // map from kernel_start to writeallowed_start with only the present flag
-    length_buffer = PAGE_ALIGN_UP(writeallowed_start - kernel_start);
-    phys_buffer = kerndata.kernel_addr.physical_base + (kernel_start - kerndata.kernel_addr.virtual_base);
-    //printf("Kern page align down: %llx --- %llx\n", PAGE_ALIGN_DOWN(kernel_start), phys_buffer);
-    vmmgr_map_pages(pml4, PAGE_ALIGN_DOWN(kernel_start), phys_buffer, length_buffer / 4096, KERNEL_PFLAG_PRESENT);
-    // map from writeallowed_start to kernel_end with `present` and `write` flags
-    length_buffer = PAGE_ALIGN_UP(kernel_end - writeallowed_start);
-    phys_buffer = kerndata.kernel_addr.physical_base + (writeallowed_start - kerndata.kernel_addr.virtual_base);
-    vmmgr_map_pages(pml4, PAGE_ALIGN_DOWN(writeallowed_start), phys_buffer, length_buffer / 4096, KERNEL_PFLAG_PRESENT | KERNEL_PFLAG_WRITE);
-    // map the kernel's stack
-    vmmgr_alloc_pages(pml4, KERNEL_STACK_ADDR, KERNEL_STACK_PAGES, KERNEL_PFLAG_PRESENT | KERNEL_PFLAG_WRITE);
-    */
+	// Fetch kernel physical and virtual base from limine
+	uint64_t kern_phys_addr_base = kerndata.kernel_addr.physical_base;
+	uint64_t kern_virt_addr_base = kerndata.kernel_addr.virtual_base;
 
-    //uint64_t length_buffer = 0;
-    //uint64_t phys_buffer = 0;
-    //length_buffer = PAGE_ALIGN_UP(kernel_end - kernel_start);
-    //phys_buffer = kerndata.kernel_addr.physical_base + (kernel_start - kerndata.kernel_addr.virtual_base);
-    //printf("Kern page align down: %llx --- %llx\n", PAGE_ALIGN_DOWN(kernel_start), phys_buffer);
-    //printf("Virt start: %llx\n", PAGE_ALIGN_DOWN(kernel_start));
-    //printf("Phys start: %llx\n", phys_buffer);
-    //vmmgr_map_pages(pml4, PAGE_ALIGN_DOWN(kernel_start), phys_buffer, length_buffer / 4096, KERNEL_PFLAG_PRESENT | KERNEL_PFLAG_EXEC);
+	for (uintptr_t text_addr = kern_text_start; text_addr < kern_text_end; text_addr += PAGE_SIZE) {
+		uintptr_t phys = text_addr - kern_virt_addr_base + kern_phys_addr_base;
+		vmmgr_map_pages(pml4, text_addr, phys, 1, 1);
+	}
 
+	for (uintptr_t rodata_addr = kern_rodata_start; rodata_addr < kern_rodata_end; rodata_addr += PAGE_SIZE) {
+		uintptr_t phys = rodata_addr - kern_virt_addr_base + kern_phys_addr_base;
+		vmmgr_map_pages(pml4, rodata_addr, phys, 1, 1 | 1ull << 63ull);
+	}
 
-    uintptr_t text_start = PAGE_ALIGN_DOWN((uintptr_t)kern_text_start_addr);
-    uintptr_t rodata_start = PAGE_ALIGN_DOWN((uintptr_t)kern_rodata_start_addr);
-	uintptr_t data_start = PAGE_ALIGN_DOWN((uintptr_t)kern_data_start_addr);
-	uintptr_t text_end = PAGE_ALIGN_UP((uintptr_t)kern_text_end_addr);
-	uintptr_t rodata_end = PAGE_ALIGN_UP((uintptr_t)kern_rodata_end_addr);
-	uintptr_t data_end = PAGE_ALIGN_UP((uintptr_t)kern_data_end_addr);
+	for (uintptr_t data_addr = kern_data_start; data_addr < kern_data_end; data_addr += PAGE_SIZE) {
+		uintptr_t phys = data_addr - kern_virt_addr_base + kern_phys_addr_base;
+		vmmgr_map_pages(pml4, data_addr, phys, 1, 0b11 | 1ull << 63ull);
+	}
 
-	uint64_t paddr = kerndata.kernel_addr.physical_base;
-	uint64_t vaddr = kerndata.kernel_addr.virtual_base;
-
-	for (uintptr_t text_addr = text_start; text_addr < text_end;
-			 text_addr += PAGE_SIZE) {
-			uintptr_t phys = text_addr - vaddr + paddr;
-			vmmgr_map_pages(pml4, text_addr, phys, 1, 1);
-		}
-
-		for (uintptr_t rodata_addr = rodata_start; rodata_addr < rodata_end;
-			 rodata_addr += PAGE_SIZE) {
-			uintptr_t phys = rodata_addr - vaddr + paddr;
-			vmmgr_map_pages(pml4, rodata_addr, phys, 1, 1);// | 1ull << 63ull);
-		}
-
-		for (uintptr_t data_addr = data_start; data_addr < data_end;
-			 data_addr += PAGE_SIZE) {
-			uintptr_t phys = data_addr - vaddr + paddr;
-			vmmgr_map_pages(pml4, data_addr, phys, 1, 0b11);// | 1ull << 63ull);
-		}
-
-
-		// map le stack
-		vmmgr_alloc_pages(pml4, KERNEL_STACK_ADDR, KERNEL_STACK_PAGES, KERNEL_PFLAG_PRESENT | KERNEL_PFLAG_WRITE);
+	// Map the Kernel Stack
+	vmmgr_alloc_pages(pml4, KERNEL_STACK_ADDR, KERNEL_STACK_PAGES, KERNEL_PFLAG_PRESENT | KERNEL_PFLAG_WRITE);
 }
 
 void vmmgr_map_all(uint64_t pml4[]) {

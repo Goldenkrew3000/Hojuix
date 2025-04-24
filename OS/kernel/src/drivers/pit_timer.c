@@ -2,19 +2,19 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <kernel.h>
-#include <kernel/i386/idt.h>
-#include <kernel/i386/irq.h>
-#include <kernel/i386/io.h>
-#include <kernel/drivers/pit_timer.h>
+#include <i386/idt.h>
+#include <i386/irq.h>
+#include <i386/io.h>
+#include <drivers/pit_timer.h>
 
 long PIT_timer_ticks = 0;
 
 void pit_timer_init() {
     // Set the ISR Interrupt Handler Function
-    //idt_assemble_entry(32, &irq_pit_timer_handler, 0x8E, (struct idt_entry_t*)kerndata.idtr.offset);
+    idt_assemble_entry(32, (uint64_t)irq_pit_timer_handler, 0x8E, (struct idt_entry_t*)kerndata.idtr.offset);
 
     // Unmask the PIT Timer IRQ (IRQ 0)
-    //irq_unmask(0);
+    irq_unmask(IRQ_PIT);
 
     // Set timer to 100hz
     pit_timer_phase(100);
@@ -27,10 +27,10 @@ void irq_pit_timer_handler(void*) {
 
     //if (PIT_timer_ticks % 100 == 0) {
         //printf("TIME %d\n", PIT_timer_ticks);
-        //}
+    //}
 
     // ACK the interrupt
-    irq_ack(0);
+    irq_ack(IRQ_PIT);
 }
 
 void pit_timer_phase(int hz) {

@@ -4,16 +4,15 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <kernel/drivers/framebuffer.h>
+#include <drivers/framebuffer.h>
+#include <memory/pmmgr.h>
+#include <i386/asm_functions.h>
 #include <kernel_ext/limine.h>
-#include <kernel/memory/pmmgr.h>
 
 #define SSFN_CONSOLEBITMAP_TRUECOLOR // Simple implementation
 #include <kernel_ext/ssfn.h> // SSFN2 (https://gitlab.com/bztsrc/scalable-font2)
 
 #define DIV_ROUND_UP(a, b) (((a) + (b) - 1) / (b))
-extern uint8_t* i386_kern_memset();
-extern uint32_t* i386_kern_memcpy();
 
 struct limine_framebuffer *g_fb; // Front framebuffer
 uint32_t* back_fb = NULL; // Back framebuffer
@@ -35,7 +34,7 @@ extern char _binary_unifont_sfn_start;
 
 void framebuffer_update() {
     volatile uint32_t *fb_ptr = g_fb->address;
-    i386_kern_memcpy(fb_ptr, back_fb, g_fb_size);
+    i386_memcpy(fb_ptr, back_fb, g_fb_size);
 }
 
 void framebuffer_draw_pixel(int x, int y, uint32_t color) {
@@ -65,7 +64,7 @@ void framebuffer_scroll(int lines) {
     long total_size = g_fb->pitch * g_fb->height;
 
     // Scroll by copying memory upwards
-    i386_kern_memcpy(g_fb->address, g_fb->address + line_size, total_size - line_size);
+    i386_memcpy(g_fb->address, g_fb->address + line_size, total_size - line_size);
     //i386_kern_memcpy(g_fb->address, g_fb->address + line_size, total_size - line_size);
 
     // Fill in background color for new line
@@ -86,7 +85,7 @@ void framebuffer_ssfn_init(struct limine_framebuffer *fb) {
     total_size = (g_fb->height * g_fb->pitch); // - (g_fb->pitch * 32); This was to make sure I wasn't overwriting outside of framebuffer space
     g_fb_size = total_size;
     back_fb = (uint32_t*)((uintptr_t)pmmgr_kmalloc(DIV_ROUND_UP(total_size, 4096)) + (uintptr_t)0xFFFF800000000000);
-    i386_kern_memset(back_fb, 0xAA, g_fb_size);
+    i386_memset(back_fb, 0xAA, g_fb_size);
 
     // Can only implement the proper one once I have libc의 realloc and free
     ssfn_src = (ssfn_font_t*)&_binary_unifont_sfn_start;

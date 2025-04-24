@@ -4,8 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <kernel/i386/irq.h>
-#include <kernel/i386/io.h>
+#include <i386/irq.h>
+#include <i386/io.h>
 
 void irq_init() {
     // Configure and mask all interrupts
@@ -28,6 +28,7 @@ void irq_configure() {
     out8(0xA1, 0xFF);
 }
 
+// TODO Fix these 2 functions
 void irq_mask(int irq_number) {
     if (irq_number < 8) {
         out8(0x21, (1 << (irq_number % 8)));
@@ -51,7 +52,7 @@ void irq_ack(int irq_number) {
     if (irq_number >= 8) {
         out8(0xA0, 0x20);
     }
-    
+
     // In either case, send an EOI to the master interrupt controller
     out8(0x20, 0x20);
 }

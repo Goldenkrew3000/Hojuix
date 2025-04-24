@@ -29,7 +29,6 @@ typedef struct {
 
 void syscall_handler(syscall_regs_t* r);
 int syscall_print(char* c);
-int syscall_newline();
 void syscall_exit(int rc);
 
 #endif

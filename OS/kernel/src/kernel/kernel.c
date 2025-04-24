@@ -5,31 +5,24 @@
 // NOTE: String.h is needed so clang can call [ memcpy, memset, memmov, memcmp ] independently
 #include <string.h>
 #include <kernel.h>
-
-#include <kernel/i386/gdt.h>
-#include <kernel/i386/idt.h>
-#include <kernel/i386/irq.h>
-#include <kernel/i386/cpuinfo.h>
-#include <kernel/drivers/ps2_keyboard.h>
-
-#include <kernel/i386/io.h>
-#include <kernel/drivers/pit_timer.h>
-
-#include <kernel/drivers/framebuffer.h>
-#include <kernel/drivers/acpi.h>
-#include <kernel/drivers/pci.h>
-#include <kernel/memory/pmmgr.h>
-#include <kernel/memory/vmmgr.h>
+#include <i386/gdt.h>
+#include <i386/idt.h>
+#include <i386/irq.h>
+#include <i386/cpuinfo.h>
+#include <drivers/ps2_keyboard.h>
+#include <i386/io.h>
+#include <drivers/pit_timer.h>
+#include <drivers/framebuffer.h>
+#include <drivers/acpi.h>
+#include <drivers/pci.h>
+#include <memory/pmmgr.h>
+#include <memory/vmmgr.h>
+#include <drivers/rs232.h>
+#include <drivers/ata_pio.h>
+#include <fs/fat16.h>
+#include <process/elf.h>
+#include <i386/asm_functions.h>
 #include <kernel_ext/limine.h>
-#include <kernel/drivers/rs232.h>
-#include <kernel/drivers/ata_pio.h>
-#include <kernel/fs/fat16.h>
-#include <kernel/process/elf.h>
-
-extern void* i386_kern_memset();
-extern void* i386_kern_memcpy();
-extern uint8_t* usermode();
-extern void* usermode2();
 
 // Set the limine base revision to 2 (Latest)
 __attribute__((used, section(".requests")))
@@ -102,7 +95,7 @@ void kernel_entry(void) {
     pmmgr_init();
     vmmgr_init();
     vmmgr_switch_cr3();
-    i386_kern_memset((uint8_t*)KERNEL_STACK_ADDR, 0x00, 4096 * 16); // Zero stack now that it is mapped
+    i386_memset((uint8_t*)KERNEL_STACK_ADDR, 0x00, 4096 * 16); // Zero stack now that it is mapped
     vmmgr_switch_stack(); // Switch to new stack at 0xfffffffffffff000
 
     // Ensure we have got a framebuffer
@@ -162,10 +155,10 @@ void kernel_entry(void) {
     asm volatile("sti");
 
     // Initialize the PIT Timer
-    pit_timer_init();
+    //pit_timer_init();
 
     // Initialize PS2 Keyboard
-    //ps2_keyboard_init();
+    ps2_keyboard_init();
 
 
 
@@ -179,8 +172,8 @@ void kernel_entry(void) {
     //struct t_pci_device *pci_device_a = (struct t_pci_device*)(kerndata.pci_devices_addr + (uint64_t)(0x9 * 1));
     //printf("Device Vendor: %x\n", pci_device_a->device_id);
 
-    //ata_pio_init();
-    //fat16_fs_test();
+    ata_pio_init();
+    fat16_fs_test();
 
     vmmgr_map_usermode(); // Prepare the stack and the exec page
     elf_prepare(0x9010000000); // Hardcoded address from the fat16 driver
@@ -192,11 +185,10 @@ void kernel_entry(void) {
     __asm__ volatile (
         "mov %0, %%r14\n\t"   // User code address in R14
         "mov %1, %%r15\n\t"   // User stack in R15
-        "call usermode2"
+        "call launch_usermode"
         :: "r"(user_code), "r"(user_stack)
         : "r14", "r15", "memory"
     );
-    printf("\n");
 
     // USERSPACE!!
 

@@ -7,15 +7,15 @@
 
 #include <stdint.h>
 #include <stdio.h>
-#include <kernel/process/elf.h>
-
-#include <kernel/memory/vmmgr.h>
-extern void* i386_kern_memcpy();
+#include <process/elf.h>
+#include <memory/vmmgr.h>
+#include <i386/asm_functions.h>
 
 uintptr_t program_header_addr;
 uintptr_t section_header_addr;
 elf_header_t* elf_header;
 elf_section_table_t* elf_text_section;
+elf_section_table_t* elf_rodata_section;
 
 void elf_prepare(uintptr_t addr) {
     printf("[ELF] Parsing ELF file...\n");
@@ -28,8 +28,15 @@ void elf_prepare(uintptr_t addr) {
 
     // TEST: Copy the .text data to the correct spot
     uintptr_t text_data = addr + elf_text_section->section_data_offset;
+    printf("TEXT: %llx\n", text_data);
     printf("[ELF] Virtual address to copy .text to: 0x%lx\n", elf_text_section->section_vaddr_start);
-    i386_kern_memcpy((uintptr_t)elf_text_section->section_vaddr_start, text_data, elf_text_section->section_size);
+    i386_memcpy((uintptr_t)elf_text_section->section_vaddr_start, text_data, elf_text_section->section_size);
+
+    uintptr_t rodata_data = addr + elf_rodata_section->section_data_offset;
+    printf("RODATA: %llx\n", rodata_data);
+    printf("[ELF] Virtual address to copy .rodata to: 0x%lx\n", elf_rodata_section->section_vaddr_start);
+    i386_memcpy((uintptr_t)elf_rodata_section->section_vaddr_start, rodata_data, elf_rodata_section->section_size);
+    printf("done\n");
 }
 
 void elf_header_parse(uintptr_t addr) { // TODO - Add a struct table for checks
@@ -132,6 +139,9 @@ void elf_parse_section_header_table(uintptr_t elf_addr, uintptr_t section_table_
         if (test_strcmp((uint8_t*)shstrtab_section_name, ".text") == 0) {
             printf("[ELF] Found .text section.\n");
             elf_text_section = (elf_section_table_t*)(section_table_addr + (0x40 * i));
+        } else if (test_strcmp((uint8_t*)shstrtab_section_name, ".rodata") == 0) {
+            printf("[ELF] Found .rodata section.\n");
+            elf_rodata_section = (elf_section_table_t*)(section_table_addr + (0x40 * i));
         }
     }
 }

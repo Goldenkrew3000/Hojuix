@@ -2,13 +2,12 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <kernel.h>
-#include <kernel/i386/io.h>
-#include <kernel/i386/idt.h>
-#include <kernel/i386/irq.h>
-#include <kernel/drivers/ps2_keyboard.h>
-#include <kernel/drivers/framebuffer.h>
+#include <i386/io.h>
+#include <i386/idt.h>
+#include <i386/irq.h>
+#include <drivers/ps2_keyboard.h>
+#include <drivers/framebuffer.h>
 
 bool wasSpecialInterrupt = false;
 
@@ -22,7 +21,16 @@ bool scrolllock_toggle = false;
 bool numlock_toggle = false;
 uint8_t ledbyte = 0x00;
 
-char keyboard_buffer[256];
+#define KEYBOARD_BUFFER_SIZE 256  // Power of 2 for efficiency
+
+typedef struct {
+    uint8_t buffer[KEYBOARD_BUFFER_SIZE];
+    uint32_t head;  // Write position (ISR updates)
+    uint32_t tail;  // Read position (OS/User reads)
+    bool overflow;  // Flag if buffer full
+} KeyboardBuffer;
+
+static KeyboardBuffer kb_buffer = {0};
 
 char keyboard_scancode_conv(uint8_t scancode) {
     if (lshift_toggle) {
@@ -59,10 +67,10 @@ char keyboard_scancode_conv(uint8_t scancode) {
 // PS/2 Keyboard IRQ Init
 void ps2_keyboard_init() {
     // Set the ISR Interrupt Handler Function
-    //idt_assemble_entry(33, &irq_keyboard_handler, 0x8E, (struct idt_entry_t*)kerndata.idtr.offset);
+    idt_assemble_entry(33, (uint64_t)irq_keyboard_handler, 0x8E, (struct idt_entry_t*)kerndata.idtr.offset);
 
     // Unmask the PS/2 Keyboard IRQ (IRQ 1)
-    //irq_unmask(1);
+    irq_unmask(IRQ_PS2_KBD);
 }
 
 // PS/2 Keyboard IRQ Handler
@@ -143,27 +151,43 @@ void irq_keyboard_handler(void*) {
         } else if (scancode == 0xB8) {
             // Left alt released
             lalt_toggle = false;
-        } else if (scancode == 0x0E) {
+        }// else if (scancode == 0x0E) {
             // Backspace key pressed
-            framebuffer_backspace();
-        } else if (scancode == 0x76) {
+            //framebuffer_backspace();
+        else if (scancode == 0x76) {
             // Escape key pressed
             printf("Escape key pressed\n");
         } else if (scancode == 0xE0) {
             // Special Key - Set bool for next keycode
             wasSpecialInterrupt = true;
         } else {
-            printf("%c", keyboard_scancode_conv(scancode));
+            //printf("%c", keyboard_scancode_conv(scancode));
+            //keyboard_char = keyboard_scancode_conv(scancode);
+
+            uint32_t next_head = (kb_buffer.head + 1) % KEYBOARD_BUFFER_SIZE;
+            if (next_head != kb_buffer.tail) {  // Not full
+                kb_buffer.buffer[kb_buffer.head] = keyboard_scancode_conv(scancode);
+                kb_buffer.head = next_head;
+            } else {
+                kb_buffer.overflow = true;  // Buffer full
+            }
+
         }
 
         }
     }
 
     // ACK the interrupt
-    irq_ack(1);
+    irq_ack(IRQ_PS2_KBD);
 }
 
+char receive_keyboard_input() {
+    if (kb_buffer.tail == kb_buffer.head) return 0x00;  // Empty
 
+    char key = kb_buffer.buffer[kb_buffer.tail];
+    kb_buffer.tail = (kb_buffer.tail + 1) % KEYBOARD_BUFFER_SIZE;
+    return key;
+}
 
 
 

@@ -1,3 +1,7 @@
+/*
+// Hojuix PMMGR v3
+*/
+
 #include <stddef.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -5,15 +9,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <kernel.h>
-#include <kernel/memory/pmmgr.h>
-#include <kernel/memory/vmmgr.h>
+#include <memory/pmmgr.h>
+#include <memory/vmmgr.h>
+#include <i386/asm_functions.h>
 #include <kernel_ext/limine.h>
 
 // Limine Memory Map Variables
 uint64_t total_usable_mem = 0;
 uint64_t total_reserved_mem = 0;
 uint64_t total_mem = 0;
-uint64_t* hhdm_offset = (uint64_t*)0xFFFF800000000000; // Hardcoded due to it always being the same
 
 // PMM Variables
 uint64_t pmmgr_total_bitmap_pages = 0;
@@ -22,27 +26,21 @@ uint64_t pmmgr_free_bitmap_pages = 0;
 uint64_t pmmgr_bitmap_bytes = 0;
 uint8_t* bitmap = (void*) 0;
 
-void pmmgr_init() { // Feed mem_size ALL (All types) memory, in bytes, and bitmap_addr 0x20C000
+void pmmgr_init() {
     // Fetch memory map info from limine
     uint64_t entry_count = kerndata.memmap.entry_count;
     struct limine_memmap_entry **entries = kerndata.memmap.entries;
+
+    // Calculate the total usable and reserved memory
     for (uint64_t i = 0; i < entry_count; i++) {
         struct limine_memmap_entry *entry = entries[i];
-        //printf("Mem Region %llu: ", i);
-        //printf("Base: 0x%llx, ", entry->base);
-        //printf("Length: 0x%llx, ", entry->length);
-        //printf("Type: %u\r\n", entry->type);
-
         total_mem += entry->length;
-        if (entry->type == LIMINE_MEMMAP_USABLE || entry->type == LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE) {
+        if (entry->type == LIMINE_MEMMAP_USABLE) {
             total_usable_mem += entry->length;
         } else {
             total_reserved_mem += entry->length;
         }
     }
-
-    // Print basic memory info to console
-    //printf("Total Memory: %lld mb (%lld mb usable / %lld mb reserved)\n", total_mem / 1024 / 1024, total_usable_mem / 1024 / 1024, total_reserved_mem / 1024 / 1024);
 
     // Calculate bitmap page count and size
     pmmgr_total_bitmap_pages = (total_mem + 0x1000 - 1) / 0x1000;
@@ -51,69 +49,48 @@ void pmmgr_init() { // Feed mem_size ALL (All types) memory, in bytes, and bitma
     // Iterate over the memory map to find a spot large enough to store the bitmap
     for (uint64_t i = 0; i < entry_count; i++) {
         struct limine_memmap_entry *entry = entries[i];
-        //if (entry->type == LIMINE_MEMMAP_USABLE || entry->type == LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE) {
         if (entry->type == LIMINE_MEMMAP_USABLE) {
-            // Blacklist memory below 0x100000
-            //if (entry->base >= 0x100000) {
-                if (entry->length >= pmmgr_bitmap_bytes) {
-                    // Found a space large enough
-                    //printf("Bitmap Location: 0x%llx - ", entry->base);
-                    //printf("0x%llx\n", entry->base + pmmgr_bitmap_bytes);
-                    bitmap = (void*) (entry->base + (uint64_t)hhdm_offset);
-                    break;
-                }
-                //}
+            if (entry->length >= pmmgr_bitmap_bytes) {
+                // Found a space large enough
+                bitmap = (void*) (entry->base + 0xffff800000000000);
+                break;
+            }
         }
     }
 
-    if (!bitmap) {
+    if (!bitmap) { // TODO Setup new way
         printf("Could not find a space large enough to store bitmap.");
-        abort();
+        // TODO abort here
     }
 
     // Set the whole bitmap to used (All 1's / 0xFF)
-    memset(bitmap, 0xFF, pmmgr_bitmap_bytes);
+    i386_memset(bitmap, 0xFF, pmmgr_bitmap_bytes);
     pmmgr_used_bitmap_pages = pmmgr_total_bitmap_pages;
 
     // Set the bitmap up according to the limine memory map (blacklist reserved memory etc) TODO CHECK
     for (uint64_t i = 0; i < entry_count; i++) {
         struct limine_memmap_entry *entry = entries[i];
-        //if (entry->type == LIMINE_MEMMAP_USABLE || entry->type == LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE) {
         if (entry->type == LIMINE_MEMMAP_USABLE) {
-            // Blacklist memory below 0x100000
-            //if (entry->base >= 0x100000) {
+            if (entry->base == (uint64_t)bitmap - 0xffff800000000000) {
+                // This is where the bitmap is stored, do not want to mark the bitmap as free memory
+                uint64_t bitmap_end_byte = (uint64_t)bitmap + pmmgr_bitmap_bytes;
+                uint64_t bitmap_end_page = ((bitmap_end_byte + 0x1000 - 1) / 0x1000) * 0x1000;
+                uint64_t entry_end_page = (entry->base + entry->length) / 0x1000; // The tutorial says usable pages are guaranteed to be page aligned in stivale. Usable and bootloader reclaimable are also in limine.
 
-                if (entry->base == (uint64_t)bitmap - (uint64_t)hhdm_offset) {
-                    // This is where the bitmap is stored, do not want to mark the bitmap as free memory
-                    uint64_t bitmap_end_byte = (uint64_t)bitmap + pmmgr_bitmap_bytes;
-                    uint64_t bitmap_end_page = ((bitmap_end_byte + 0x1000 - 1) / 0x1000) * 0x1000;
-                    uint64_t entry_end_page = (entry->base + entry->length) / 0x1000; // The tutorial says usable pages are guaranteed to be page aligned in stivale. Usable and bootloader reclaimable are also in limine.
-
-                    // Continue until we have freed all pages
-                    for (uint64_t page = bitmap_end_page; page < entry_end_page; page++) {
-                        pmmgr_set_free(page);
-                    }
-                } else {
-                    uint64_t page = entry->base / 0x1000;
-                    uint64_t count = entry->length / 0x1000;
-
-                    for (uint64_t j = 0; j < count; j++) {
-                        pmmgr_set_free(page + j);
-                    }
+                // Continue until we have freed all pages
+                for (uint64_t page = bitmap_end_page; page < entry_end_page; page++) {
+                    pmmgr_set_free(page);
                 }
+            } else {
+                uint64_t page = entry->base / 0x1000;
+                uint64_t count = entry->length / 0x1000;
 
-                //}
+                for (uint64_t j = 0; j < count; j++) {
+                    pmmgr_set_free(page + j);
+                }
+            }
         }
     }
-
-    // Blacklist the first 0x100000 (1mb) of memory
-    // REASON: Most motherboard BIOSes and operating systems blacklist this region, but for some reason, my motherboard (MS-7D77)
-    //         marks this region as available, but triple faults if you change it (lmao)
-    //printf("--- BEFORE BLACKLIST ---\n");
-    //pmmgr_print_bitmap();
-    //printf("------------------------\n");
-    //memset(bitmap, 0xFF, 32); // Mark the first 0x100000 as used (essentially blacklisting it)
-    // TODO - Update page counts here
 }
 
 void pmmgr_set_used(uint64_t page) {
@@ -158,26 +135,22 @@ uint64_t pmmgr_find_free_pages(uint64_t size) {
         }
     }
 
+    // TODO Add better way
     printf("Failed to find free memory.\n");
-    abort();
+    // TODO abort here
 }
 
-void *pmmgr_kmalloc(uint64_t size) { // Size in pages
-    size = size * 4096;
-    uint64_t needed_pages = (size + 0x1000 - 1) / 0x1000;
-    uint64_t free_page = pmmgr_find_free_pages(size);
+// Returns the physical address to a page of memory
+uintptr_t pmmgr_kmalloc(int size) {
+    uint64_t free_page = pmmgr_find_free_pages(1);
+    pmmgr_set_used(free_page);
 
-    //printf("Allocating free page\n");
-
-    for (uint64_t i = 0; i < needed_pages; i++) {
-        pmmgr_set_used(free_page + i);
-    }
-
-    return (void*)(free_page * 0x1000); // Returns physical addr
+    return ((uintptr_t)free_page) * 0x1000;
 }
 
-void pmmgr_free(void *addr, uint64_t size) { // 현재 몰라...
-    uint64_t page = (uint64_t)addr / 0x1000;
+// Frees a page
+void pmmgr_kfree(uintptr_t physical_addr, uint64_t size) {
+    uint64_t page = physical_addr / 0x1000;
     uint64_t pages = (size + 0x1000 - 1) / 0x1000;
 
     for (uint64_t i = 0; i < pages; i++) {
