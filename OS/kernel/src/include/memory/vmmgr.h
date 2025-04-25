@@ -13,8 +13,6 @@
 #define KERNEL_PFLAG_WRITE   0b10
 #define KERNEL_PFLAG_USER    0b100
 #define KERNEL_PFLAG_EXEC    (1ULL << 63)
-//#define KERNEL_PFLAG_EXEC    0b1000000000000000000000000000000000000000000000000000000000000000
-#define KERNEL_PFLAG_ALL 0b0000000000000000000000000000000000000000000000000000000000000111
 //#define KERNEL_PFLAG_ALL (KERNEL_PFLAG_EXEC | KERNEL_PFLAG_PRESENT | KERNEL_PFLAG_WRITE | KERNEL_PFLAG_USER)
 
 #define PAGE_SIZE 4096
@@ -43,13 +41,12 @@
        :\
        :  "r" (KERNEL_STACK_PTR)\
     )
-    //"movq $0, %%rbp\n"\
-    "push $0"\
 
 #define vmmgr_switch_cr3() \
     KERNEL_SWITCH_PAGE_TREE(kerndata.cr3);
 
 uintptr_t vmmgr_kalloc_page(uintptr_t virt_addr, int pages);
+void vmmgr_kfree_page(uintptr_t virt_addr, int pages);
 uintptr_t vmmgr_virt_to_phys_ext(uintptr_t virt_addr);
 void vmmgr_map_usermode();
 void vmmgr_init();
@@ -57,10 +54,10 @@ uint64_t vmmgr_virt_to_phys(uint64_t pml4_addr[], uint64_t virt_addr);
 void vmmgr_write_vmem(uint64_t *pml4_addr, uint64_t virt_addr, char *data, size_t len);
 void vmmgr_push_vmem(uint64_t *pml4_addr, uint64_t rsp, char *data, size_t len);
 void vmmgr_map_pages(uint64_t pml4_addr[], uint64_t virt_addr, uint64_t phys_addr, uint64_t num_pages, uint64_t flags);
+void vmmgr_unmap_pages(uint64_t *pml4_addr, uint64_t virt_addr, uint64_t num_pages);
 void vmmgr_alloc_pages(uint64_t pml4_addr[], uint64_t virt_addr, uint64_t num_pages, uint64_t flags);
 void vmmgr_map_sections(uint64_t pml4[]);
 void vmmgr_map_kernel(uint64_t pml4[]);
 void vmmgr_map_all(uint64_t pml4[]);
-void vmmgr_print_limine_memmap();
 
 #endif

@@ -4,6 +4,7 @@
 #include <drivers/pci.h>
 #include <kernel_ext/limine.h>
 
+void run_usermode();
 void kernel_finished();
 
 typedef struct {

@@ -1,4 +1,6 @@
-ENTRY(main)  /* Entry point symbol */
+ENTRY(_start)  /* Entry point symbol */
+
+/* Adjust based on your OS's user memory layout */
 
 SECTIONS {
     .text 0x400000: {

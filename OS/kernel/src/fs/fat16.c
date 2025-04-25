@@ -25,6 +25,8 @@ int data_start_sector = 0;
 int root_dir_items = 0;
 fat16_file_t files[32]; // Support 32 files
 
+int previous_file_pages = 0;
+
 int fat16_strncmp(const char *s1, const char *s2, size_t n) // Not at all compliant strncmp implementation
 {
     for (size_t i = 0; i < n; i++) {
@@ -33,6 +35,22 @@ int fat16_strncmp(const char *s1, const char *s2, size_t n) // Not at all compli
         }
     }
     return 0;
+}
+
+int fat16_strcmp(const char *s1, const char *s2)
+{
+    while (*s1 == *s2)
+    {
+        if (*s1 == '\0')
+        {
+            return 0;
+        }
+
+        ++s1;
+        ++s2;
+    }
+
+    return *s1 - *s2;
 }
 
 
@@ -57,6 +75,19 @@ void fat16_fs_test() {
         }
     }
 }
+
+void fat16_read_in_exec_file(char* filename) {
+    printf("[FAT16] Finding %s for exec()\n", filename);
+
+    // Search file tree for index
+    for (size_t i = 0; i < root_dir_items; i++) {
+        if (fat16_strcmp(files[i].filename_full, filename) == 0) {
+            printf("[FAT16] Reading in %s for exec()\n", filename);
+            fat16_read_file(files[i].start_cluster, files[i].filesize);
+        }
+    }
+}
+
 
 void fat16_parse_bootsector(uintptr_t addr) {
     // Read the BPB (BIOS Protection Block)
@@ -110,6 +141,26 @@ void fat16_read_root_directory() {
         DIR_LFN_t* file_entry = (DIR_LFN_t*)root_dir_item_addr;
         printf("File %d: %.8s . %.3s | File size: %d bytes\n", i + 1, file_entry->info83.filename, file_entry->info83.file_extension, file_entry->info83.filesize);
 
+        // Make a full filename for finding files (This code is super cursed)
+        // Add the filename
+        int filename_full_index = 0;
+        for (size_t j = 0; j < 8; j++) {
+            if (file_entry->info83.filename[j] != 0x20) {
+                files[i].filename_full[filename_full_index] = file_entry->info83.filename[j];
+                filename_full_index++;
+            }
+        }
+        // Add the '.'
+        files[i].filename_full[filename_full_index] = '.';
+        filename_full_index++;
+        // Add the file extension
+        for (size_t j = 0; j < 3; j++) {
+            if (file_entry->info83.file_extension[j] != 0x20) {
+                files[i].filename_full[filename_full_index] = file_entry->info83.file_extension[j];
+                filename_full_index++;
+            }
+        }
+
         // Add info to the file array
         i386_memcpy(files[i].filename, file_entry->info83.filename, 8);
         i386_memcpy(files[i].file_extension, file_entry->info83.file_extension, 3);
@@ -122,9 +173,14 @@ void fat16_read_root_directory() {
 }
 
 void fat16_read_file(uint16_t start_cluster, uint16_t filesize) {
-    // Allocate memory for the file
     uintptr_t file_virtual_addr = 0x9010000000;
+
+    // Attempt to free memory from previous file
+    vmmgr_kfree_page(file_virtual_addr, previous_file_pages);
+
+    // Allocate memory for the file
     vmmgr_kalloc_page(file_virtual_addr, PAGE_ALIGN_UP(filesize) / 4096);
+    previous_file_pages = PAGE_ALIGN_UP(filesize) / 4096;
     i386_memset((uint8_t*)file_virtual_addr, 0x00, PAGE_ALIGN_UP(filesize) / 4096);
     // WOAH WOAH TODO HOLY FUCK IM NOT ZEROING THE PAGE CORRECTLY!!!! HOL UP TOO SMALL
     printf("[FAT16] Reading file of %d bytes to 0x%llx\n", filesize, file_virtual_addr);

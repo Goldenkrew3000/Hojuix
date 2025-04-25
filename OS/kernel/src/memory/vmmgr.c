@@ -12,6 +12,7 @@
 #include <memory/vmmgr.h>
 #include <drivers/rs232.h>
 #include <i386/asm_functions.h>
+#include <misc/kpanic.h>
 #include <kernel_ext/limine.h>
 
 extern char kern_text_start_addr[];
@@ -28,6 +29,10 @@ uintptr_t pml4_global;
 uintptr_t vmmgr_kalloc_page(uintptr_t virt_addr, int pages) {
     //uintptr_t page = (uintptr_t)pmmgr_kmalloc(1) + (uintptr_t)hhdm_off;
     vmmgr_alloc_pages((uint64_t*)pml4_global, virt_addr, pages, KERNEL_PFLAG_PRESENT | KERNEL_PFLAG_WRITE);
+}
+
+void vmmgr_kfree_page(uintptr_t virt_addr, int pages) {
+    vmmgr_unmap_pages((uint64_t*)pml4_global, virt_addr, pages);
 }
 
 // INFO: This is used for debugging if a physical address (calculated to a virtual address) is on the TLB
@@ -61,27 +66,9 @@ void vmmgr_map_usermode() {
     printf("Mapped usermode exec page\n");
 
     // Blank pages
-    i386_memset((uint8_t*)usermode_data_page, 0x00, 4096);
-    i386_memset((uint8_t*)usermode_exec_page, 0x00, 4096);
-
-    // Copy usermode test program from kernel mapped pages into the user exec page
-    // NOTE: This all seems to match up (bytes wise) to the objdump version
-    //size_t user_code_size = _binary____usermode_test_end - _binary____usermode_test_start;
-    //printf("(In kernel page) User program start: %llx\n", _binary____usermode_test_start);
-    //printf("(In kernel page) User program start: %llx\n", _binary____usermode_test_end);
-    //printf("(In kernel page) User program size (in bytes): %lld\n", user_code_size);
-    //i386_kern_memcpy((uint8_t*)usermode_exec_page, (uint8_t*)_binary____usermode_test_start, user_code_size);
-    //uint8_t* usermode_exec_page_access = (uint8_t*)usermode_exec_page;
-
-
-
-
-
-    //i386_kern_memcpy((uint8_t*)usermode_exec_page, &usermode_exec_page_access_raw, 49);
-
-    // Sanity check the page
-    //uint8_t* ueps = (uint8_t*)usermode_exec_page; // user exec page sanity
-    //printf("Sanity check: %02X %02X %02X %02X %02X %02X\n", ueps[0], ueps[1], ueps[2], ueps[3], ueps[4], ueps[5]); // WOOOO
+    i386_memset((uint8_t*)USER_STACK_ADDR, 0x00, 65536);
+    i386_memset((uint8_t*)usermode_data_page, 0x00, 32768);
+    i386_memset((uint8_t*)usermode_exec_page, 0x00, 32768);
 }
 
 
@@ -177,7 +164,6 @@ void vmmgr_map_pages(uint64_t pml4_addr[], uint64_t virt_addr, uint64_t phys_add
             pml4_addr[pml4] = (uint64_t)pmmgr_kmalloc(1);
             pml3_addr = (uint64_t*)(pml4_addr[pml4] + kerndata.hhdm_offset);
             i386_memset((uint8_t*)pml3_addr, 0x00, 4096);
-            //pml4_addr[pml4] |= KERNEL_PFLAG_ALL;
             pml4_addr[pml4] |= flags | KERNEL_PFLAG_PRESENT | KERNEL_PFLAG_WRITE | KERNEL_PFLAG_USER;
         } else {
             pml3_addr = (uint64_t*)(PAGE_ALIGN_DOWN(pml4_addr[pml4]) + kerndata.hhdm_offset);
@@ -189,7 +175,6 @@ void vmmgr_map_pages(uint64_t pml4_addr[], uint64_t virt_addr, uint64_t phys_add
                 pml3_addr[pml3] = (uint64_t)pmmgr_kmalloc(1);
                 pml2_addr = (uint64_t*)(pml3_addr[pml3] + kerndata.hhdm_offset);
                 i386_memset((uint8_t*)pml2_addr, 0x00, 4096);
-                //pml3_addr[pml3] |= KERNEL_PFLAG_ALL;
                 pml3_addr[pml3] |= flags | KERNEL_PFLAG_PRESENT | KERNEL_PFLAG_WRITE | KERNEL_PFLAG_USER;
             } else {
                 pml2_addr = (uint64_t*)(PAGE_ALIGN_DOWN(pml3_addr[pml3]) + kerndata.hhdm_offset);
@@ -201,7 +186,6 @@ void vmmgr_map_pages(uint64_t pml4_addr[], uint64_t virt_addr, uint64_t phys_add
                     pml2_addr[pml2] = (uint64_t)pmmgr_kmalloc(1);
                     pml1_addr = (uint64_t*)(pml2_addr[pml2] + kerndata.hhdm_offset);
                     i386_memset((uint8_t*)pml1_addr, 0x00, 4096);
-                    //pml2_addr[pml2] |= KERNEL_PFLAG_ALL;
                     pml2_addr[pml2] |= flags | KERNEL_PFLAG_PRESENT | KERNEL_PFLAG_WRITE | KERNEL_PFLAG_USER;
                 } else {
                     pml1_addr = (uint64_t*)(PAGE_ALIGN_DOWN(pml2_addr[pml2]) + kerndata.hhdm_offset);
@@ -218,8 +202,56 @@ void vmmgr_map_pages(uint64_t pml4_addr[], uint64_t virt_addr, uint64_t phys_add
         }
         pml3 = 0;
     }
-    printf("no more virt mem\n");
-    asm volatile("hlt");
+    printf("[VMMGR] %s: Could not map more virtual memory.\n", __func__);
+    kpanic();
+}
+
+void vmmgr_unmap_pages(uint64_t *pml4_addr, uint64_t virt_addr, uint64_t num_pages) {
+    // NOTE: Written with deepseek, rewrite all paging code to be this simple to understand
+    // TODO Does not deal with freeing the physical memory
+    virt_addr &= 0x0000FFFFFFFFFFFF;  // Ensure canonical address
+
+    while (num_pages > 0) {
+        uint64_t pml4_idx = (virt_addr >> 39) & 0x1FF;
+        uint64_t pml3_idx = (virt_addr >> 30) & 0x1FF;
+        uint64_t pml2_idx = (virt_addr >> 21) & 0x1FF;
+        uint64_t pml1_idx = (virt_addr >> 12) & 0x1FF;
+
+        // Check if PML4 entry exists
+        if (!(pml4_addr[pml4_idx] & KERNEL_PFLAG_PRESENT)) {
+            virt_addr += 4096;
+            num_pages--;
+            continue;
+        }
+        uint64_t *pml3_table = (uint64_t*)(PAGE_ALIGN_DOWN(pml4_addr[pml4_idx]) + kerndata.hhdm_offset);
+
+        // Check if PML3 entry exists
+        if (!(pml3_table[pml3_idx] & KERNEL_PFLAG_PRESENT)) {
+            virt_addr += 4096;
+            num_pages--;
+            continue;
+        }
+        uint64_t *pml2_table = (uint64_t*)(PAGE_ALIGN_DOWN(pml3_table[pml3_idx]) + kerndata.hhdm_offset);
+
+        // Check if PML2 entry exists
+        if (!(pml2_table[pml2_idx] & KERNEL_PFLAG_PRESENT)) {
+            virt_addr += 4096;
+            num_pages--;
+            continue;
+        }
+        uint64_t *pml1_table = (uint64_t*)(PAGE_ALIGN_DOWN(pml2_table[pml2_idx]) + kerndata.hhdm_offset);
+
+        // Invalidate PTE (clear PRESENT bit)
+        if (pml1_table[pml1_idx] & KERNEL_PFLAG_PRESENT) {
+            pml1_table[pml1_idx] = 0;
+            asm volatile("invlpg (%0)" : : "r" (virt_addr));  // Flush TLB
+        }
+
+        // TODO: Optionally free empty page tables (PML1, PML2, PML3) if all entries are zero.
+
+        virt_addr += 4096;
+        num_pages--;
+    }
 }
 
 void vmmgr_alloc_pages(uint64_t pml4_addr[], uint64_t virt_addr, uint64_t num_pages, uint64_t flags) {
@@ -234,7 +266,6 @@ void vmmgr_alloc_pages(uint64_t pml4_addr[], uint64_t virt_addr, uint64_t num_pa
             pml4_addr[pml4] = (uint64_t)pmmgr_kmalloc(1);
             pml3_addr = (uint64_t*)(pml4_addr[pml4] + kerndata.hhdm_offset);
             i386_memset((uint8_t*)pml3_addr, 0x00, 4096);
-            //pml4_addr[pml4] |= KERNEL_PFLAG_ALL;
             pml4_addr[pml4] |= flags | KERNEL_PFLAG_PRESENT | KERNEL_PFLAG_WRITE | KERNEL_PFLAG_USER;
         } else {
             pml3_addr = (uint64_t*)(PAGE_ALIGN_DOWN(pml4_addr[pml4]) + kerndata.hhdm_offset);
@@ -245,7 +276,6 @@ void vmmgr_alloc_pages(uint64_t pml4_addr[], uint64_t virt_addr, uint64_t num_pa
                 pml3_addr[pml3] = (uint64_t)pmmgr_kmalloc(1);
                 pml2_addr = (uint64_t*)(pml3_addr[pml3] + kerndata.hhdm_offset);
                 i386_memset((uint8_t*)pml2_addr, 0x00, 4096);
-                //pml3_addr[pml3] |= KERNEL_PFLAG_ALL;
                 pml3_addr[pml3] |= flags | KERNEL_PFLAG_PRESENT | KERNEL_PFLAG_WRITE | KERNEL_PFLAG_USER;
             } else {
                 pml2_addr = (uint64_t*)(PAGE_ALIGN_DOWN(pml3_addr[pml3]) + kerndata.hhdm_offset);
@@ -257,7 +287,6 @@ void vmmgr_alloc_pages(uint64_t pml4_addr[], uint64_t virt_addr, uint64_t num_pa
                     pml2_addr[pml2] = (uint64_t)pmmgr_kmalloc(1);
                     pml1_addr = (uint64_t*)(pml2_addr[pml2] + kerndata.hhdm_offset);
                     i386_memset((uint8_t*)pml1_addr, 0x00, 4096);
-                    //pml2_addr[pml2] |= KERNEL_PFLAG_ALL;
                     pml2_addr[pml2] |= flags | KERNEL_PFLAG_PRESENT | KERNEL_PFLAG_WRITE | KERNEL_PFLAG_USER;
                 } else {
                     pml1_addr = (uint64_t*)(PAGE_ALIGN_DOWN(pml2_addr[pml2]) + kerndata.hhdm_offset);
@@ -275,8 +304,8 @@ void vmmgr_alloc_pages(uint64_t pml4_addr[], uint64_t virt_addr, uint64_t num_pa
         }
         pml3 = 0;
     }
-    printf("no more virtual memory\n");
-    asm volatile("hlt");
+    printf("[VMMGR] %s: Could not map more virtual memory.\n", __func__);
+    kpanic();
 }
 
 void vmmgr_map_sections(uint64_t pml4[]) {
@@ -340,20 +369,4 @@ void vmmgr_map_kernel(uint64_t pml4[]) {
 void vmmgr_map_all(uint64_t pml4[]) {
     vmmgr_map_kernel(pml4);
     vmmgr_map_sections(pml4);
-}
-
-void vmmgr_print_limine_memmap() {
-    uint64_t num_memmap_entries                = kerndata.memmap.entry_count;
-    struct limine_memmap_entry *memmap_entries = *kerndata.memmap.entries;
-    for (size_t entry = 0; entry < num_memmap_entries; entry++) {
-        uint64_t entry_type = memmap_entries[entry].type;
-        if (entry_type == LIMINE_MEMMAP_KERNEL_AND_MODULES ||
-            entry_type == LIMINE_MEMMAP_ACPI_NVS ||
-            entry_type == LIMINE_MEMMAP_RESERVED) {
-                printf("Mem Region %llu: ", entry_type);
-                printf("Base: 0x%llx, ", memmap_entries[entry].base);
-                printf("Length: 0x%llx, ", memmap_entries[entry].length);
-                printf("Type: %u\r\n", memmap_entries[entry].type);
-        }
-    }
 }

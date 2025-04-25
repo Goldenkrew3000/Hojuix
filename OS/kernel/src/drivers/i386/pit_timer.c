@@ -5,7 +5,7 @@
 #include <i386/idt.h>
 #include <i386/irq.h>
 #include <i386/io.h>
-#include <drivers/pit_timer.h>
+#include <drivers/i386/pit_timer.h>
 
 long PIT_timer_ticks = 0;
 

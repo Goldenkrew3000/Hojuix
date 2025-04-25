@@ -2,6 +2,39 @@
 #define _SYSCALL_H
 #include <stdint.h>
 
+/*
+// Syscall List
+*/
+// Reading and writing
+#define SYS_WRITE 1
+#define SYS_READ 2
+
+// Opening and closing
+#define SYS_OPEN 3
+#define SYS_CLOSE 4
+
+// Process management
+#define SYS_FORK 5
+#define SYS_EXEC 6
+#define SYS_EXIT 7
+#define SYS_KILL 8
+#define SYS_GETPID 9
+
+// Device Management
+#define SYS_IOCTL 10
+
+// Memory management
+#define SYS_MMAP 11
+#define SYS_MUNMAP 12
+
+// Kernel Management
+#define SYS_REBOOT 13
+#define SYS_SHUTDOWN 14
+
+// Temporary Syscalls
+#define SYS_PRINTF 101
+#define SYS_KBD_INPUT 102
+
 typedef struct {
 	uint64_t r15;
 	uint64_t r14;
@@ -30,5 +63,8 @@ typedef struct {
 void syscall_handler(syscall_regs_t* r);
 int syscall_print(char* c);
 void syscall_exit(int rc);
+
+void syscall_open();
+void syscall_exec(char* rdi);
 
 #endif

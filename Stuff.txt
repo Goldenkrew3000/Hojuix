@@ -1,0 +1,43 @@
+Software to port initially:
+- C Cowsay
+- An actual shell (bash??)
+- Something that actually puts an image on the screen (Probably going to be DIY)
+- VIM!!!!
+
+Stuff required:
+- open() syscall
+- fork() syscall
+- a VFS
+- A precompiled userspace filesystem on real hardware (Maybe through Limine, don't wanna write an NVMe driver this early)
+- Change user input to a more UNIXy way (/dev/event, not a direct syscall)
+- Expand LibC
+- Standard error returns
+- Scheduler
+
+Ideas:
+- Use XV6's syscall list as a guideline, Linux's is kind of fucked tbh
+- O_RDWR, O_RDONLY etc for files
+  Basically make it as UNIX like as possible
+
+Stuff for porting more advanced software than like 3 files:
+- OS Specific GCC toolchain :((((
+  THIS IS GOING TO SUCK...
+
+VFS Stuff (Looking at XV6's source code):
+sys_open():
+    Checks mode (O_CREATE, O_RDONLY, etc)
+    Checks type (T_DIR, T_DEVICE)
+    T_DEVICE:
+        'iunlockput()' --> 'unlock, then put'
+        iunlock() --> Unlocks the inode (what the fuck is an inode specifically)
+            An inode: Sotres all the metadata about a file, EXCEPT for the filename
+            Essentially, my VFS HAS to have inode support
+
+File descriptors:
+    Might be per process? Would make sense but would complicate things
+    FD 0 --> Stdin, FD 1 --> Stdout, FD 2 --> Stderr are all reserved
+    A FD struct should contain:
+        --> File position pointer
+        --> Access mode
+        --> Reference to the file/inode
+        --> Other metadata

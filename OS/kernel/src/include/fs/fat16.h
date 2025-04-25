@@ -56,11 +56,13 @@ typedef struct {
 typedef struct {
     char filename[8];
     char file_extension[3];
+    char filename_full[12]; // FILENAME.FILE_EXTENSION
     uint16_t filesize;
     uint16_t start_cluster;
 } fat16_file_t; // Files found in the filesystem
 
 void fat16_fs_test();
+void fat16_read_in_exec_file(char* filename);
 void fat16_parse_bootsector(uintptr_t addr);
 void fat16_read_root_directory();
 void fat16_read_file(uint16_t start_cluster, uint16_t filesize);
