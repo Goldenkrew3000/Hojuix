@@ -11,7 +11,7 @@
 #include <i386/cpuinfo.h>
 #include <drivers/ps2_keyboard.h>
 #include <i386/io.h>
-#include <drivers/pit_timer.h>
+#include <drivers/i386/pit_timer.h>
 #include <drivers/framebuffer.h>
 #include <drivers/acpi.h>
 #include <drivers/pci.h>
@@ -23,6 +23,9 @@
 #include <process/elf.h>
 #include <i386/asm_functions.h>
 #include <kernel_ext/limine.h>
+
+#include <i386/spinlock.h>
+#include <stdatomic.h>
 
 // Set the limine base revision to 2 (Latest)
 __attribute__((used, section(".requests")))
@@ -75,6 +78,8 @@ static volatile LIMINE_REQUESTS_END_MARKER;
 
 // Create Global Kernel Data Storage
 kernel_t kerndata = {0};
+
+void run_usermode();
 
 void kernel_entry(void) {
     // Disable interrupts
@@ -172,23 +177,15 @@ void kernel_entry(void) {
     //struct t_pci_device *pci_device_a = (struct t_pci_device*)(kerndata.pci_devices_addr + (uint64_t)(0x9 * 1));
     //printf("Device Vendor: %x\n", pci_device_a->device_id);
 
-    ata_pio_init();
-    fat16_fs_test();
+    
+    printf("SPLK test start\n");
+    spinlock_t sl = SPINLOCK_INIT;
+    spinlock_acquire(&sl.lock);
+    printf("SPLK test end\n");
+    spinlock_release(&sl.lock);
+    
 
-    vmmgr_map_usermode(); // Prepare the stack and the exec page
-    elf_prepare(0x9010000000); // Hardcoded address from the fat16 driver
-    void (*user_code)() = (void(*)())0x400000;
-    uint64_t user_stack = 0x700000000000;
-    uint64_t if_addr=0x200;
-
-    printf("\n");
-    __asm__ volatile (
-        "mov %0, %%r14\n\t"   // User code address in R14
-        "mov %1, %%r15\n\t"   // User stack in R15
-        "call launch_usermode"
-        :: "r"(user_code), "r"(user_stack)
-        : "r14", "r15", "memory"
-    );
+    run_usermode();
 
     // USERSPACE!!
 
@@ -230,4 +227,24 @@ void kernel_finished() {
     printf("[KERNEL] Reached end of kernel.\n");
     while(1) { }
     asm volatile("cli; hlt");
+}
+
+void run_usermode() {
+    ata_pio_init();
+    fat16_fs_test();
+
+    vmmgr_map_usermode(); // Prepare the stack and the exec page
+    elf_prepare(0x9010000000); // Hardcoded address from the fat16 driver
+    void (*user_code)() = (void(*)())0x400000;
+    uint64_t user_stack = 0x700000000000;
+    uint64_t if_addr=0x200;
+
+    printf("\n");
+    __asm__ volatile (
+        "mov %0, %%r14\n\t"   // User code address in R14
+        "mov %1, %%r15\n\t"   // User stack in R15
+        "call launch_usermode"
+        :: "r"(user_code), "r"(user_stack)
+        : "r14", "r15", "memory"
+    );
 }
