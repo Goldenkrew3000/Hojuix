@@ -1,15 +1,75 @@
 #ifndef _PCI_H
 #define _PCI_H
+#include <stdint.h>
+#include <stdbool.h>
 
-// PCI Device Table용
-struct t_pci_device {
+// PCI Addresses
+#define PCI_CONFIG_ADDR 0xCF8
+#define PCI_CONFIG_DATA 0xCFC
+
+// PCI Offsets
+#define PCI_OFFSET_COMMAND 0x4
+#define PCI_OFFSET_STATUS 0x6
+#define PCI_OFFSET_BAR0_LO 0x10
+#define PCI_OFFSET_BAR0_HI 0x12
+#define PCI_OFFSET_BAR1_LO 0x14
+#define PCI_OFFSET_BAR1_HI 0x16
+#define PCI_OFFSET_BAR2_LO 0x18
+#define PCI_OFFSET_BAR2_HI 0x1A
+#define PCI_OFFSET_BAR3_LO 0x1C
+#define PCI_OFFSET_BAR3_HI 0x1E
+#define PCI_OFFSET_BAR4_LO 0x20
+#define PCI_OFFSET_BAR4_HI 0x22
+#define PCI_OFFSET_BAR5_LO 0x24
+#define PCI_OFFSET_BAR5_HI 0x26
+
+typedef struct {
     uint16_t vendor_id; // Vendor ID
     uint16_t device_id; // Device ID
-    uint16_t class_id; // Class ID
-    uint8_t bus; // Location on PCI Bus (0 - 255)
-    uint8_t slot; // Location on bus (0 - 31)
-    uint8_t function; // Location on slot (0 - 7)
-} __attribute__((packed));
+    uint16_t class_id;  // Class ID
+    uint8_t bus;        // Location on PCI Bus (0 - 255)
+    uint8_t slot;       // Location on bus (0 - 31)
+    uint8_t func;       // Location on slot (0 - 7)
+    uintptr_t bar_table;
+} pci_device_table_t;
+
+typedef struct {
+    bool bar0_exists;
+    uint32_t bar0_addr;
+    uint32_t bar0_full; // Sometimes the full uint32_t is required for fetching 64-bit addresses, safer to keep it
+    uint32_t bar0_bar_size;
+    bool bar0_mmio;
+
+    bool bar1_exists;
+    uint32_t bar1_addr;
+    uint32_t bar1_full;
+    uint32_t bar1_bar_size;
+    bool bar1_mmio;
+
+    bool bar2_exists;
+    uint32_t bar2_addr;
+    uint32_t bar2_full;
+    uint32_t bar2_bar_size;
+    bool bar2_mmio;
+    
+    bool bar3_exists;
+    uint32_t bar3_addr;
+    uint32_t bar3_full;
+    uint32_t bar3_bar_size;
+    bool bar3_mmio;
+    
+    bool bar4_exists;
+    uint32_t bar4_addr;
+    uint32_t bar4_full;
+    uint32_t bar4_bar_size;
+    bool bar4_mmio;
+
+    bool bar5_exists;
+    uint32_t bar5_addr;
+    uint32_t bar5_full;
+    uint32_t bar5_bar_size;
+    bool bar5_mmio;
+} pci_device_bar_table_t;
 
 // PCI Device Type용
 typedef struct {
@@ -156,76 +216,13 @@ static t_pci_class pci_classCodes[] = {
     {0x1080, "Other Encryption Controller"},
 };
 
-static t_pci_device_name pci_deviceNames[] = {
-    // Intel 0x8086
-    {0x8086, 0x0007, "82379AB"},
-    {0x8086, 0x0008, "Extended Express System Support Controller"},
-    {0x8086, 0x0039, "21145 Fast Ethernet"},
-    {0x8086, 0x0040, "Core Processor DRAM Controller"},
-    {0x8086, 0x0041, "Core Processor PCI Express x16 Root Port"},
-    {0x8086, 0x0042, "Core Processor Integrated Graphics Controller"},
-    {0x8086, 0x0043, "Core Processor Secondary PCI Express Root Port"},
-    {0x8086, 0x0044, "Core Processor DRAM Controller"},
-    {0x8086, 0x0045, "Core Processor PCI Express x16 Root Port"},
-    {0x8086, 0x0046, "Core Processor Integrated Graphics Controller"},
-    {0x8086, 0x0047, "Core Processor Secondary PCI Express Root Port"},
-    {0x8086, 0x0048, "Core Processor DRAM Controller"},
-    {0x8086, 0x0049, "Core Processor PCI Express x16 Root Port"},
-    {0x8086, 0x004A, "Core Processor Integrated Graphics Controller"},
-    {0x8086, 0x004B, "Core Processor Secondary PCI Express Root Port"},
-    {0x8086, 0x0050, "Core Processor Thermal Management Controller"},
-    {0x8086, 0x0069, "Core Processor DRAM Controller"},
-    {0x8086, 0x0082, "Centrino Advanced-N 6205 [Taylor Peak]"},
-    {0x8086, 0x0083, "Centrino Wireless-N 1000 [Condor Peak]"},
-    {0x8086, 0x0084, "Centrino Wireless-N 1000 [Condor Peak]"},
-    {0x8086, 0x0085, "Centrino Advanced-N 6205 [Taylor Peak]"},
-    {0x8086, 0x0087, "Centrino Advanced-N + WiMAX 6250 [Kilmer Peak]"},
-    {0x8086, 0x0089, "Centrino Advanced-N + WiMAX 6250 [Kilmer Peak]"},
-    {0x8086, 0x008A, "Centrino Wireless-N 1030 [Rainbow Peak]"},
-    {0x8086, 0x008B, "Centrino Wireless-N 1030 [Rainbow Peak]"},
-    {0x8086, 0x0090, "Centrino Advanced-N 6230 [Rainbow Peak]"},
-    {0x8086, 0x0091, "Centrino Advanced-N 6230 [Rainbow Peak]"},
-    {0x8086, 0x0100, "2nd Generation Core Processor Family DRAM Controller"},
-    {0x8086, 0x0101, "Xeon E3-1200/2nd Generation Core Processor Family PCI Express Root Port"},
-    {0x8086, 0x0102, "2nd Generation Core Processor Family Integrated Graphics Controller"},
-    {0x8086, 0x0104, "2nd Generation Core Processor Family DRAM Controller"},
-    {0x8086, 0x0105, "Xeon E3-1200/2nd Generation Core Processor Family PCI Express Root Port"},
-    {0x8086, 0x0106, "2nd Generation Core Processor Family Integrated Graphics Controller"},
-    {0x8086, 0x0108, "Xeon E3-1200 Processor Family DRAM Controller"},
-    {0x8086, 0x0109, "Xeon E3-1200/2nd Generation Core Processor Family PCI Express Root Port"},
-    {0x8086, 0x010A, "Xeon E3-1200 Processor Family Integrated Graphics Controller"},
-    {0x8086, 0x010B, "Xeon E3-1200/2nd Generation Core Processor Family Integrated Graphics Controller"},
-    {0x8086, 0x010C, "Xeon E3-1200/2nd Generation Core Processor Family DRAM Controller"},
-    {0x8086, 0x010D, "Xeon E3-1200/2nd Generation Core Processor Family PCI Express Root Port"},
-    {0x8086, 0x010E, "Xeon E3-1200/2nd Generation Core Processor Family Integrated Graphics Controller"},
-    {0x8086, 0x0112, "2nd Generation Core Processor Family Integrated Graphics Controller"},
-    {0x8086, 0x0116, "2nd Generation Core Processor Family Integrated Graphics Controller"},
-    {0x8086, 0x0122, "2nd Generation Core Processor Family Integrated Graphics Controller"},
-    {0x8086, 0x0126, "2nd Generation Core Processor Family Integrated Graphics Controller"},
-    {0x8086, 0x0150, "Xeon E3-1200 v2/3rd Gen Core processor DRAM Controller"},
-    {0x8086, 0x0151, "Xeon E3-1200 v2/3rd Gen Core processor PCI Express Root Port"},
-    {0x8086, 0x0152, "Xeon E3-1200 v2/3rd Gen Core processor Graphics Controller"},
-    {0x8086, 0x0153, "3rd Gen Core Processor Thermal Subsystem"},
-    {0x8086, 0x0154, "3rd Gen Core processor DRAM Controller"},
-    {0x8086, 0x0155, "Xeon E3-1200 v2/3rd Gen Core processor PCI Express Root Port"},
-    {0x8086, 0x0156, "3rd Gen Core processor Graphics Controller"},
-    {0x8086, 0x0158, "Xeon E3-1200 v2/Ivy Bridge DRAM Controller"},
-    {0x8086, 0x0159, "Xeon E3-1200 v2/3rd Gen Core processor PCI Express Root Port"},
-    {0x8086, 0x015A, "Xeon E3-1200 v2/Ivy Bridge Graphics Controller"},
-    {0x8086, 0x015C, "Xeon E3-1200 v2/3rd Gen Core processor DRAM Controller"},
-    {0x8086, 0x015D, "Xeon E3-1200 v2/3rd Gen Core processor PCI Express Root Port"},
-    {0x8086, 0x015E, "Xeon E3-1200 v2/3rd Gen Core processor Graphics Controller"},
-    {0x8086, 0x0162, "IvyBridge GT2 [HD Graphics 4000]"},
-    {0x8086, 0x0166, "3rd Gen Core processor Graphics Controller"},
-    {0x8086, 0x016A, "Xeon E3-1200 v2/3rd Gen Core processor Graphics Controller"},
-    {0x8086, 0x0172, "Xeon E3-1200 v2/3rd Gen Core processor Graphics Controller"},
-    {0x8086, 0x0176, "3rd Gen Core processor Graphics Controller"},
-    {0x8086, 0x0201, "Arctic Sound"},
-    {0x8086, 0x2918, "82801IB (ICH9) LPC Interface Controller"},
-};
-
 void pci_init();
+int pci_find_ahci_device();
+uintptr_t pci_fetch_bar(int index);
 uint16_t pci_readWord(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset);
+void pci_writeWord(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset, uint16_t value);
+uint32_t pci_readLong(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset);
+void pci_writeLong(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset, uint32_t value);
 char* pci_searchClassCode(uint16_t class);
 char* pci_searchDevices(uint16_t vendor, uint16_t device);
 

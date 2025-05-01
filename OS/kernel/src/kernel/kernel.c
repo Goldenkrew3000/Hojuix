@@ -23,6 +23,7 @@
 #include <process/elf.h>
 #include <i386/asm_functions.h>
 #include <kernel_ext/limine.h>
+#include <drivers/ahci.h>
 
 #include <i386/spinlock.h>
 #include <stdatomic.h>
@@ -123,18 +124,6 @@ void kernel_entry(void) {
     pmmgr_print_bitmap();
     print_cpuid();
 
-    //vmmgr_print_limine_memmap();
-
-
-
-
-    //printf("Paging test\n");
-    //uint64_t* data = (uint64_t*)0x1bf7be68cd2;
-    //uintptr_t newpage = vmmgr_kalloc_page(0x1bf7be68cd2);
-    //printf("%llx\n", *data);
-    //uintptr_t newpage = vmmgr_kalloc_page(0x)
-
-
     // Initialize GDT
     tss_init();
     gdt_init();
@@ -161,7 +150,7 @@ void kernel_entry(void) {
     //pit_timer_init();
 
     // Initialize PS2 Keyboard
-    ps2_keyboard_init();
+    //ps2_keyboard_init();
 
 
 
@@ -169,7 +158,30 @@ void kernel_entry(void) {
     acpi_init();
 
     // Initialize PCI
-    //pci_init();
+    //ata_pio_init();
+    //fat16_fs_test();
+
+    pci_init();
+    int ahci_idx = pci_find_ahci_device();
+    uintptr_t bar_tbl_addr = pci_fetch_bar(ahci_idx);
+    pci_device_bar_table_t* bar_tbl = (pci_device_bar_table_t*)bar_tbl_addr;
+    printf("BAR4 Exists: %d\n", bar_tbl->bar4_exists);
+    printf("BAR5 Exists: %d\n", bar_tbl->bar5_exists);
+    printf("BAR4 MMIO: %d\n", bar_tbl->bar4_mmio);
+    printf("BAR5 MMIO: %d\n", bar_tbl->bar5_mmio);
+    printf("BAR5 Address: 0x%lx\n", bar_tbl->bar5_addr);
+    printf("BAR5 Size: %ld bytes\n", bar_tbl->bar5_bar_size);
+
+
+    ahci_init();
+
+    //nvme_init();
+    //dump_first_sector();
+    //ac97_init();
+    //generate_tone(500, 50000);
+    //play_large_buffer();
+    //for (volatile int i = 0; i < 1000000; i++);
+    
 
     // WORKING - Attempt to retrieve a pci device from the pci device table
     //struct t_pci_device *pci_device_a = (struct t_pci_device*)(kerndata.pci_devices_addr + (uint64_t)(0x9 * 1));
@@ -183,10 +195,10 @@ void kernel_entry(void) {
     spinlock_release(&sl.lock);
     */
 
-    ata_pio_init();
-    fat16_fs_test();
-    vmmgr_map_usermode(); // Prepare the stack and the exec page
-    run_usermode();
+    //ata_pio_init();
+    //fat16_fs_test();
+    //vmmgr_map_usermode(); // Prepare the stack and the exec page
+    //run_usermode();
 
     // USERSPACE!!
 
@@ -226,7 +238,7 @@ void kernel_entry(void) {
 
 void kernel_finished() {
     printf("[KERNEL] Reached end of kernel.\n");
-    while(1) { }
+    while(1) { asm volatile("nop"); }
     asm volatile("cli; hlt");
 }
 
