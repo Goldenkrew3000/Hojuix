@@ -1,3 +1,9 @@
+/*
+// Hojuix x86_64 Kernel Entry
+// 2025-05-01
+// GPLv3
+*/
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -147,7 +153,7 @@ void kernel_entry(void) {
     asm volatile("sti");
 
     // Initialize the PIT Timer
-    //pit_timer_init();
+    pit_timer_init(); // REQUIRED for the AHCI driver
 
     // Initialize PS2 Keyboard
     //ps2_keyboard_init();
@@ -155,25 +161,50 @@ void kernel_entry(void) {
 
 
     // Initialize ACPI
-    acpi_init();
+    //acpi_init();
 
     // Initialize PCI
     //ata_pio_init();
     //fat16_fs_test();
 
-    pci_init();
-    int ahci_idx = pci_find_ahci_device();
-    uintptr_t bar_tbl_addr = pci_fetch_bar(ahci_idx);
-    pci_device_bar_table_t* bar_tbl = (pci_device_bar_table_t*)bar_tbl_addr;
-    printf("BAR4 Exists: %d\n", bar_tbl->bar4_exists);
-    printf("BAR5 Exists: %d\n", bar_tbl->bar5_exists);
-    printf("BAR4 MMIO: %d\n", bar_tbl->bar4_mmio);
-    printf("BAR5 MMIO: %d\n", bar_tbl->bar5_mmio);
-    printf("BAR5 Address: 0x%lx\n", bar_tbl->bar5_addr);
-    printf("BAR5 Size: %ld bytes\n", bar_tbl->bar5_bar_size);
+    
+    
+    // Initialize PCI, find the AHCI controller, and get it's BAR configuration
+    uintptr_t pci_device_tbl_addr = pci_init(); // Initialize the PCI bus and fill the PCI device table
+    int ahci_idx = pci_find_ahci_device(); // Search for an AHCI device in the PCI device table
+    if (ahci_idx == -ENOENT) {
+        printf("[KERNEL] Could not find AHCI controller on the PCI bus.\n");
+        kernel_finished(); // TODO KPanic here
+    }
+    uintptr_t ahci_bar_tbl_addr = pci_fetch_bar(ahci_idx);
+
+    // Initialize the AHCI controller
+    int rc = ahci_init(ahci_bar_tbl_addr);
+    if (rc != EXIT_SUCCESS) {
+        printf("[KERNEL] Could not initialize the AHCI controller.\n");
+        kernel_finished(); // TODO KPanic here
+    }
+
+    // Read a single sector, at LBA 0 (512 bytes), into the buffer from SATA Port 3
+    uintptr_t sector_buffer = pmmgr_kmalloc(1);
+    sector_buffer += 0xFFFF800000000000;
+    i386_memset((uint8_t*)sector_buffer, 0x00, 4096);
+    rc = ahci_read(3, sector_buffer, 0, 1);
+
+    // Print out LBA 0 to the TTY
+    uint8_t* sector_buffer_ptr = (uint8_t*)sector_buffer;
+    for (size_t i = 0; i < 512; i++) {
+        printf("%.2x ", sector_buffer_ptr[i]);
+        if ((i+1) % 32 == 0) {
+            printf("\n");
+        }
+    }
+    printf("\n");
 
 
-    ahci_init();
+
+    
+    
 
     //nvme_init();
     //dump_first_sector();

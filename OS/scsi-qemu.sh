@@ -1,0 +1,1 @@
+qemu-system-x86_64 -m 512 -drive if=pflash,unit=0,format=raw,file=qemu/ovmf-code-x86_64.fd,readonly=on -drive if=pflash,unit=1,format=raw,file=qemu/ovmf-vars-x86_64.fd -cdrom qemu/hojuix.iso -drive id=disk,file=qemu/hdd.img,if=none -device ahci,id=ahci -device ide-hd,bus=ahci.0,drive=disk -monitor stdio
