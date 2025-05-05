@@ -1,10 +1,13 @@
 # Hojuix build script
 
-# Use GCC 14.2.0 x86_64-elf cross compiler
+# Use GCC 15.1.0 x86_64-elf cross compiler
 export PATH="/home/user/Developer/Hojuix/CrossCompiler/output/bin:$PATH"
 CC="x86_64-elf-gcc"
 LD="x86_64-elf-ld"
 OBJCPY="x86_64-elf-objcopy"
+
+# Print GCC version
+$CC --version
 
 CFLAGS="-g -pipe -Wall -Wextra -std=gnu11 -nostdinc -ffreestanding -fno-stack-protector -fno-stack-check -fno-lto -fno-PIC -ffunction-sections -fdata-sections -m64 -march=x86-64 -mno-80387 -mno-mmx -mno-sse -mno-sse2 -mno-red-zone -mcmodel=kernel -isystem freestanding-headers"
 LINK="-L src/libk"
@@ -18,6 +21,7 @@ mkdir obj/i386
 mkdir obj/kernel
 mkdir obj/memory
 mkdir obj/drivers
+mkdir obj/drivers/i386
 mkdir obj/fs
 mkdir obj/process
 mkdir obj/misc
@@ -37,12 +41,17 @@ $CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/cpuinfo.c -o obj/i386/cpuinfo.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/acpi.c -o obj/drivers/acpi.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/pci.c -o obj/drivers/pci.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/ahci.c -o obj/drivers/ahci.o
-$CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/rtc.c -o obj/drivers/rtc.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/rs232.c -o obj/drivers/rs232.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/framebuffer.c -o obj/drivers/framebuffer.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/ps2_keyboard.c -o obj/drivers/ps2_keyboard.o
-$CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/pit_timer.c -o obj/drivers/pit_timer.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/ata_pio.c -o obj/drivers/ata_pio.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/nvme.c -o obj/drivers/nvme.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/xhci.c -o obj/drivers/xhci.o
+
+# i386 Driver files
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/i386/rtc.c -o obj/drivers/i386/rtc.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/i386/pit_timer.c -o obj/drivers/i386/pit_timer.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/i386/intel_hrng.c -o obj/drivers/i386/intel_hrng.o
 
 # Memory management related files
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/memory/pmmgr.c -o obj/memory/pmmgr.o
@@ -50,6 +59,7 @@ $CC $CFLAGS $LINK $INCL -MMD -MP -c src/memory/vmmgr.c -o obj/memory/vmmgr.o
 
 # Filesystem files
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/fs/fat16.c -o obj/fs/fat16.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/fs/guid_pt.c -o obj/fs/guid_pt.o
 
 # Usermode related files
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/process/syscall.c -o obj/process/syscall.o
@@ -79,15 +89,19 @@ obj/i386/cpuinfo.o \
 obj/drivers/acpi.o \
 obj/drivers/pci.o \
 obj/drivers/ahci.o \
-obj/drivers/rtc.o \
 obj/drivers/rs232.o \
 obj/drivers/framebuffer.o \
 obj/drivers/ps2_keyboard.o \
-obj/drivers/pit_timer.o \
 obj/drivers/ata_pio.o \
+obj/drivers/nvme.o \
+obj/drivers/xhci.o \
+obj/drivers/i386/rtc.o \
+obj/drivers/i386/pit_timer.o \
+obj/drivers/i386/intel_hrng.o \
 obj/memory/pmmgr.o \
 obj/memory/vmmgr.o \
 obj/fs/fat16.o \
+obj/fs/guid_pt.o \
 obj/process/syscall.o \
 obj/process/elf.o \
 obj/misc/kpanic.o \

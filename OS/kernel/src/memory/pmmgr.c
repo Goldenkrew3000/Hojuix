@@ -148,7 +148,22 @@ uintptr_t pmmgr_kmalloc(int size) {
     return ((uintptr_t)free_page) * 0x1000;
 }
 
-// Frees a page
+// Returns the physical address to x pages of contiguous memory
+// size - Pages
+uintptr_t pmmgr_kmalloc_contiguous(int size) {
+    uint64_t needed_pages = size;
+    uint64_t free_page = pmmgr_find_free_pages(size);
+
+    //printf("Allocating free page\n");
+
+    for (uint64_t i = 0; i < needed_pages; i++) {
+        pmmgr_set_used(free_page + i);
+    }
+
+    return ((uintptr_t)free_page) * 0x1000;
+}
+
+// Frees a page - TODO FIX REMOVE SIZE
 void pmmgr_kfree(uintptr_t physical_addr, uint64_t size) {
     uint64_t page = physical_addr / 0x1000;
     uint64_t pages = (size + 0x1000 - 1) / 0x1000;

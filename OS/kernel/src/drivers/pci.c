@@ -1,3 +1,9 @@
+/*
+// Hojuix PCI Driver
+// 2025-05-01
+// GPLv3
+*/
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -14,7 +20,7 @@
 pci_device_table_t* pci_device_table;
 int pci_device_count = 0;
 
-void pci_init() {
+uintptr_t pci_init() {
     printf("[PCI] Initializing...\n");
 
     // Allocate a page for the PCI Device Table
@@ -59,12 +65,24 @@ void pci_init() {
             }
         }
     }
+
+    return pci_device_table_addr;
 }
 
-// Find the AHCI controller (Class 0x0106). Returns index on success, or -ENOENT on failure
+// Find the AHCI controller. Returns index on success, or -ENOENT on failure
 int pci_find_ahci_device() {
     for (size_t i = 0; i < pci_device_count; i++) {
-        if (pci_device_table[i].class_id == 0x0106) {
+        if (pci_device_table[i].class_id == PCI_CLASS_AHCI) {
+            return i;
+        }
+    }
+    return -ENOENT;
+}
+
+// Find the XHCI controller. Returns index on success, or -ENOENT on failure
+int pci_find_xhci_device() {
+    for (size_t i = 0; i < pci_device_count; i++) {
+        if (pci_device_table[i].class_id == PCI_CLASS_XHCI) {
             return i;
         }
     }
@@ -86,6 +104,11 @@ uintptr_t pci_fetch_bar(int index) {
     uint8_t pci_bus = pci_device_table[index].bus;
     uint8_t pci_slot = pci_device_table[index].slot;
     uint8_t pci_func = pci_device_table[index].func;
+
+    // Add the PCI Device Bus, Slot, and Function to the BAR Table
+    pci_bar_table->bus = pci_bus;
+    pci_bar_table->slot = pci_slot;
+    pci_bar_table->func = pci_func;
 
     // Check if PCI device has multiple functions TODO
     //uint16_t multiple_function_check = pci_readWord(pci_bus, pci_slot, pci_func, )

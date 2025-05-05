@@ -9,7 +9,7 @@
 
 // PCI Offsets
 #define PCI_OFFSET_COMMAND 0x4
-#define PCI_OFFSET_STATUS 0x6
+#define PCI_OFFSET_STATUS  0x6
 #define PCI_OFFSET_BAR0_LO 0x10
 #define PCI_OFFSET_BAR0_HI 0x12
 #define PCI_OFFSET_BAR1_LO 0x14
@@ -23,6 +23,10 @@
 #define PCI_OFFSET_BAR5_LO 0x24
 #define PCI_OFFSET_BAR5_HI 0x26
 
+// PCI Classes
+#define PCI_CLASS_AHCI 0x0106
+#define PCI_CLASS_XHCI 0x0C03
+
 typedef struct {
     uint16_t vendor_id; // Vendor ID
     uint16_t device_id; // Device ID
@@ -34,6 +38,10 @@ typedef struct {
 } pci_device_table_t;
 
 typedef struct {
+    uint8_t bus;
+    uint8_t slot;
+    uint8_t func;
+    
     bool bar0_exists;
     uint32_t bar0_addr;
     uint32_t bar0_full; // Sometimes the full uint32_t is required for fetching 64-bit addresses, safer to keep it
@@ -216,8 +224,9 @@ static t_pci_class pci_classCodes[] = {
     {0x1080, "Other Encryption Controller"},
 };
 
-void pci_init();
+uintptr_t pci_init();
 int pci_find_ahci_device();
+int pci_find_xhci_device();
 uintptr_t pci_fetch_bar(int index);
 uint16_t pci_readWord(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset);
 void pci_writeWord(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset, uint16_t value);

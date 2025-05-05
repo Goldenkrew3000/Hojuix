@@ -28,17 +28,26 @@ uintptr_t pml4_global;
 
 uintptr_t vmmgr_kalloc_page(uintptr_t virt_addr, int pages) {
     //uintptr_t page = (uintptr_t)pmmgr_kmalloc(1) + (uintptr_t)hhdm_off;
-    vmmgr_alloc_pages((uint64_t*)pml4_global, virt_addr, pages, KERNEL_PFLAG_PRESENT | KERNEL_PFLAG_WRITE);
+    vmmgr_alloc_pages((uint64_t*)pml4_global, virt_addr, pages, KERNEL_PFLAG_PRESENT | KERNEL_PFLAG_WRITE); //| (1 << 4)
 }
 
 void vmmgr_kfree_page(uintptr_t virt_addr, int pages) {
     vmmgr_unmap_pages((uint64_t*)pml4_global, virt_addr, pages);
 }
 
+void vmmgr_mmio_map(uintptr_t virtual_addr, uintptr_t physical_addr, int pages) {
+    vmmgr_map_pages((uint64_t*)pml4_global, virtual_addr, physical_addr, pages, KERNEL_PFLAG_PRESENT | KERNEL_PFLAG_WRITE);
+}
+
+void vmmgr_mmio_map_uncache(uintptr_t virtual_addr, uintptr_t physical_addr, int pages) {
+    vmmgr_map_pages((uint64_t*)pml4_global, virtual_addr, physical_addr, pages, KERNEL_PFLAG_PRESENT | KERNEL_PFLAG_WRITE | (1 << 4));
+}
+
 // INFO: This is used for debugging if a physical address (calculated to a virtual address) is on the TLB
 // In the case of ACPI: No, it returned 0xdead on real hardware, but the same phys address in an emulator
 // Effectively, debugging the TLB on real hardware to find the root cause of a page fault
 uintptr_t vmmgr_virt_to_phys_ext(uintptr_t virt_addr) {
+    printf("input: 0x%llx\n", virt_addr);
     uint64_t res = vmmgr_virt_to_phys((uint64_t*)pml4_global, virt_addr);
     return (uintptr_t)res;
 }
@@ -79,8 +88,6 @@ void vmmgr_init() {
 	// Malloc and zero PML4 page
     uintptr_t pml4_virt = (uintptr_t)pmmgr_kmalloc(1) + (uintptr_t)hhdm_off;
     pml4_global = pml4_virt;
-    //memset((void*)pml4_virt, 0x00, 4096);
-    //kern_memset((uint8_t*)pml4_virt, 0, 4096);
     i386_memset((void*)pml4_virt, 0x00, 4096);
 
     vmmgr_map_all((uint64_t*)pml4_virt);

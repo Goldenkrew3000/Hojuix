@@ -47,6 +47,8 @@
 
 uintptr_t vmmgr_kalloc_page(uintptr_t virt_addr, int pages);
 void vmmgr_kfree_page(uintptr_t virt_addr, int pages);
+void vmmgr_mmio_map(uintptr_t virtual_addr, uintptr_t physical_addr, int pages);
+void vmmgr_mmio_map_uncache(uintptr_t virtual_addr, uintptr_t physical_addr, int pages);
 uintptr_t vmmgr_virt_to_phys_ext(uintptr_t virt_addr);
 void vmmgr_map_usermode();
 void vmmgr_init();
