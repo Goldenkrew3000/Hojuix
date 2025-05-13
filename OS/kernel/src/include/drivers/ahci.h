@@ -169,6 +169,7 @@ typedef volatile struct { // (AHCI 1.3.1 Page 23)
 } hba_capabilities_t;
 
 int ahci_init(uintptr_t bar_tbl_addr);
+int ahci_read_internal(int port, uintptr_t buffer, uint64_t lba_start, uint32_t sector_count);
 int ahci_read(int port, uintptr_t buffer, uint64_t lba_start, uint32_t sector_count);
 void ahci_interrupt(void* frame);
 

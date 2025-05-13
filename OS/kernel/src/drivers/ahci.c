@@ -14,26 +14,17 @@
 #include <i386/asm_functions.h>
 #include <drivers/i386/pit_timer.h>
 
-//uint8_t bus = 15; // 15
-///uint8_t slot = 0; // 0
-//uint8_t func = 0; // 0
-//uintptr_t BAR5_ADDR = 0xf6680000; //0xf6680000 // 0x81060000
-
 hba_mem_t* hba_mem;
 hba_capabilities_t* hba_capabilities;
 
-#define ATA_CMD_READ_DMA_EX 0x25 // 0x25
+#define ATA_CMD_READ_DMA_EX 0x25
 #define FIS_TYPE_REG_H2D 0x27
 #define HBA_PxIS_TFES (1 << 30)
 #define ATA_DEV_BUSY 0x80
 #define ATA_DEV_DRQ 0x08
 #define AHCI_START 0x12340000
 
-bool ahci_read_sector(uint8_t port_num, uint64_t lba, uint16_t sector_count, void* buffer);
-
 int ahci_init(uintptr_t bar_tbl_addr) {
-    printf("[AHCI] Initializing...\n");
-    
     // Get the PCI BAR Table
     pci_device_bar_table_t* pci_bar_table = (pci_device_bar_table_t*)bar_tbl_addr;
 
@@ -193,11 +184,12 @@ int ahci_init(uintptr_t bar_tbl_addr) {
     // Read the cababilities register
     hba_capabilities = (hba_capabilities_t*)pci_bar_table->bar5_addr; // hba_mem->cap is at 0x0 offset
 
+    printf("[AHCI] Initialized.\n");
     return EXIT_SUCCESS;
 }
 
-int ahci_read(int port, uintptr_t buffer, uint64_t lba_start, uint32_t sector_count) {
-    printf("[AHCI] Reading Sector %d on port %d (LBA Start: %d)\n", lba_start, port, sector_count);
+int ahci_read_internal(int port, uintptr_t buffer, uint64_t lba_start, uint32_t sector_count) {
+    //printf("[AHCI] Reading %d Sectors on port %d (LBA Start: %d)\n", sector_count, port, lba_start);
 
     // Clear pending interrupts
     hba_mem->ports[port].is = ~0x0;
@@ -215,7 +207,7 @@ int ahci_read(int port, uintptr_t buffer, uint64_t lba_start, uint32_t sector_co
     int slot = 0;
     for (size_t i = 0; i < slots_num; i++) {
         if ((slots & 1) == 0) {
-            printf("Found slot: %d\n", i);
+            //printf("Found slot: %d\n", i);
             slot = i;
             break;
         }
@@ -227,8 +219,8 @@ int ahci_read(int port, uintptr_t buffer, uint64_t lba_start, uint32_t sector_co
 
     // Set to 0 if reading, else 1
     hdr[slot].prdtl = (uint16_t)(((sector_count - 1) >> 4) + 1);
-    if (hdr[slot].prdtl > 8) {
-        printf("[AHCI] Max read/write in a single command is 32MiB.\n"); // TODO Not sure whether this is working or not
+    if (hdr[slot].prdtl > AHCI_PRDT_SIZE) {
+        printf("[AHCI] Max read/write in a single command is 65536 bytes (LBA48).\n");
         return -EINVAL;
     }
 
@@ -238,18 +230,19 @@ int ahci_read(int port, uintptr_t buffer, uint64_t lba_start, uint32_t sector_co
 
     // Setup the PRDTs. 4MiB per PRDT
     uint16_t i = 0;
+    uint32_t sector_count_prdt = sector_count;
     for (i; i < (hdr[slot].prdtl - 1); i++) {
         tbl->prdt_entry[i].dba = buffer - 0xFFFF800000000000; // NOTE - Removing the HHDT offset, PRDT requires physical address
         tbl->prdt_entry[i].dbau = 0; // TODO - Allow 64 bit physical addresses
         tbl->prdt_entry[i].dbc = (4 << 20) - 1;
         tbl->prdt_entry[i].i = 1;
         buffer += (4 << 20) >> 2;
-        sector_count -= 16;
+        sector_count_prdt -= 16;
     }
     // Last Entry
     tbl->prdt_entry[i].dba = buffer - 0xFFFF800000000000; // TODO - Same applies here
     tbl->prdt_entry[i].dbau = 0; // TODO - Same applies here
-    tbl->prdt_entry[i].dbc = (sector_count << 9) - 1; 
+    tbl->prdt_entry[i].dbc = (sector_count_prdt << 9) - 1; 
     tbl->prdt_entry[i].i = 1;
 
     // Split the uint64_t lba_start into 2 uint32's lba_lo and lba_hi
@@ -284,12 +277,19 @@ int ahci_read(int port, uintptr_t buffer, uint64_t lba_start, uint32_t sector_co
         printf("[AHCI] Drive was never ready to accept commands.!\n");
         return -EIO;
     }
-
-    hba_mem->ports[port].ci = 1 << slot;
-    timer_wait(50); // Wait for the command to happen
-    // TODO - Is there some kind of register I can spin on to wait for the DMA instead of arbitrary timing?
-    // TODO - This same timeout might not work for example if I am reading like 64 sectors or more? Even more reason for a spinning design
-
+    hba_mem->ports[port].ci = (1 << slot);
+    
+    spin = 0;
+    while ((hba_mem->ports[port].ci & (1 << slot)) && spin < 1000000) {
+        if (hba_mem->ports[port].is & HBA_PxIS_TFES) {
+            //printf("[AHCI] Transfer error (IS: 0x%x)\n", hba_mem->ports[port].is);
+            // TODO All reports as a transfer error, but its working fine...
+            hba_mem->ports[port].is = ~0; // Clear interrupts
+            return -EIO;
+        }
+        spin++;
+    }
+    
     // Check SERR, if not 0x0, something went wrong
     if (hba_mem->ports[port].serr != 0x00) {
         printf("[AHCI] An error was returned from the AHCI controller. (SERR: 0x%lx)\n", hba_mem->ports[port].serr);
@@ -303,6 +303,32 @@ int ahci_read(int port, uintptr_t buffer, uint64_t lba_start, uint32_t sector_co
     if (hdr->prdbc != sector_count * 512) {
         printf("[AHCI] Not all data was transferred successfully.\n");
         return -EIO;
+    }
+}
+
+// Main AHCI Read function
+// Performs reads on the ahci_read_internal function, ensuring correct function over 64kb
+// TODO Pass through error
+int ahci_read(int port, uintptr_t buffer, uint64_t lba_start, uint32_t sector_count) {
+    printf("[AHCI] Reading %ld sectors on port %d.\n", sector_count, port);
+    
+    if (sector_count > 128) {
+        // Split read into 128 sector chunks
+        int remainder = sector_count % 128;
+        int full_reads = (sector_count - remainder) / 128;
+        printf("%d full reads with %d sectors left.\n", full_reads, remainder);
+
+        uintptr_t curr_buffer = buffer;
+        uint64_t curr_lba = lba_start;
+        for (size_t i = 0; i < full_reads; i++) {
+            ahci_read_internal(port, curr_buffer, curr_lba, 128);
+            curr_buffer += 65536;
+            curr_lba += 128;
+        }
+        ahci_read_internal(port, curr_buffer, curr_lba, remainder);
+    } else {
+        // Size is under 64kb, read normally
+        ahci_read_internal(port, buffer, lba_start, sector_count);
     }
 }
 

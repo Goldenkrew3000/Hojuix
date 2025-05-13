@@ -26,6 +26,8 @@
 // PCI Classes
 #define PCI_CLASS_AHCI 0x0106
 #define PCI_CLASS_XHCI 0x0C03
+#define PCI_CLASS_HDA  0x0403
+#define PCI_CLASS_NVME 0x0108
 
 typedef struct {
     uint16_t vendor_id; // Vendor ID
@@ -227,6 +229,8 @@ static t_pci_class pci_classCodes[] = {
 uintptr_t pci_init();
 int pci_find_ahci_device();
 int pci_find_xhci_device();
+int pci_find_hda_device();
+int pci_find_nvme_device();
 uintptr_t pci_fetch_bar(int index);
 uint16_t pci_readWord(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset);
 void pci_writeWord(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset, uint16_t value);

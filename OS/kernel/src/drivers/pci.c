@@ -21,13 +21,11 @@ pci_device_table_t* pci_device_table;
 int pci_device_count = 0;
 
 uintptr_t pci_init() {
-    printf("[PCI] Initializing...\n");
-
     // Allocate a page for the PCI Device Table
     uintptr_t pci_device_table_addr = pmmgr_kmalloc(1); // TODO Could potentially go over a page?
     pci_device_table_addr += 0xFFFF800000000000;
     pci_device_table = (pci_device_table_t*)pci_device_table_addr;
-    printf("[PCI] Device Table Virtual Address: 0x%llx\n", pci_device_table_addr);
+    //printf("[PCI] Device Table Virtual Address: 0x%llx\n", pci_device_table_addr);
 
     // Perform initial bus scan (Brute force method)
     uint16_t vendor;
@@ -66,6 +64,7 @@ uintptr_t pci_init() {
         }
     }
 
+    printf("[PCI] Initialized.\n");
     return pci_device_table_addr;
 }
 
@@ -89,6 +88,26 @@ int pci_find_xhci_device() {
     return -ENOENT;
 }
 
+// Find the HDA controller. Returns index on success, or -ENOENT on failure
+int pci_find_hda_device() {
+    for (size_t i = 0; i < pci_device_count; i++) {
+        if (pci_device_table[i].class_id == PCI_CLASS_HDA) {
+            return i;
+        }
+    }
+    return -ENOENT;
+}
+
+// Find the NVME controller. Returns index on success, or -ENOENT on failure
+int pci_find_nvme_device() {
+    for (size_t i = 0; i < pci_device_count; i++) {
+        if (pci_device_table[i].class_id == PCI_CLASS_NVME) {
+            return i;
+        }
+    }
+    return -ENOENT;
+}
+
 // Fetch BARS of a PCI device. Index is the index of the PCI Device Table
 // Returns -- on success, -EINVAL on failure TODO
 uintptr_t pci_fetch_bar(int index) {
@@ -98,7 +117,7 @@ uintptr_t pci_fetch_bar(int index) {
     i386_memset((uint8_t*)pci_bar_table_addr, 0x00, 4096); // Clear the page
     pci_device_table[index].bar_table = pci_bar_table_addr; // Fill in the PCI BAR table address
     pci_device_bar_table_t* pci_bar_table = (pci_device_bar_table_t*)pci_bar_table_addr;
-    printf("[PCI] BAR Table Virtual Address: 0x%llx\n", pci_bar_table_addr);
+    //printf("[PCI] BAR Table Virtual Address: 0x%llx\n", pci_bar_table_addr);
 
     // Redefine PCI Device Bus, Slot, and Function to make the code cleaner
     uint8_t pci_bus = pci_device_table[index].bus;
