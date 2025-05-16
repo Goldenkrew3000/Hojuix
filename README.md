@@ -14,25 +14,28 @@ This notice will be removed ONLY when I am confident that this would be a good r
 - Framebuffer (Not double-buffered, yet)
 - PIT Timer (@ 100hz)
 - Physical Memory Manager
-- Virtual Memory Manager (4 Level Paging) - WIP (Weird things happen with some addresses and not affecting the TLB)
+- Virtual Memory Manager (4 Level Paging)
 - Basic RS232 Driver - WIP (Works on real hardware... sometimes)
+- Usermode (although more work required)
+- AHCI Driver
 
 # WIP
-- Usermode! Works (Can execute ASM and C programs), but cannot return after finishing (no exit syscall) and syscalls are funky
 - Fix new interrupt handler (Assembly based to handle interrupt driven syscalls)
 - Add new masking method for PS/2 Keyboard and PIT
-- Finish ATA PIO driver
 - FAT16 support
+- NVMe Support
+- HDA Support
+- ELF Parser
+- Allow the VMM to free memory
 
 # Todo
 - Completed Keyboard Driver
 - PS/2 Mouse Driver (Not planning to do anything with it currently, but want support)
-- ELF Parser
 - Scheduling
 - 'Port' a shell (Probably XV6's SH)
 - VFS
-- Allow the VMM to free memory (Can only allocate now lmao)
 - (MAYBE) Port build system to CMake
+- Drop ATA PIO support
 
 # Funny list of things todo
 - Native linux kexec support in terminal (Treat a vmlinuz file as an executable)
@@ -40,7 +43,8 @@ This notice will be removed ONLY when I am confident that this would be a good r
 # List of bugs/issues to fix
 - Clean up the PMMGR (And fix the slow allocation speed on 12th gen Intel)
 - Rewrite the VMMGR
-- Add a way to free virtual memory
+- Add more verbose errors to the VMMGR
+- Add a way to free physical memory from the VMMGR (Traverse the TLB)
 - Add a way for the VMMGR to allocate memory and send a random address back in a range
 - Properly implement the new interrupt handler
 - Switch syscall handler from interrupt based to 'syscall' instruction way
