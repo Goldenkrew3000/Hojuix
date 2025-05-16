@@ -24,10 +24,11 @@
 #define PCI_OFFSET_BAR5_HI 0x26
 
 // PCI Classes
-#define PCI_CLASS_AHCI 0x0106
-#define PCI_CLASS_XHCI 0x0C03
-#define PCI_CLASS_HDA  0x0403
-#define PCI_CLASS_NVME 0x0108
+#define PCI_CLASS_AHCI  0x0106
+#define PCI_CLASS_XHCI  0x0C03
+#define PCI_CLASS_HDA   0x0403 // Normal HDA class
+#define PCI_CLASS_HDA_B 0x0401 // Found on my thinkpad, still identifies as HDA and seems to work as one
+#define PCI_CLASS_NVME  0x0108
 
 typedef struct {
     uint16_t vendor_id; // Vendor ID

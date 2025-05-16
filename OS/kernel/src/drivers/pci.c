@@ -91,7 +91,13 @@ int pci_find_xhci_device() {
 // Find the HDA controller. Returns index on success, or -ENOENT on failure
 int pci_find_hda_device() {
     for (size_t i = 0; i < pci_device_count; i++) {
+        // Search for the more common 0403 class first
         if (pci_device_table[i].class_id == PCI_CLASS_HDA) {
+            return i;
+        }
+
+        // Now search for the 0401 class if 0403 was not found
+        if (pci_device_table[i].class_id == PCI_CLASS_HDA_B) {
             return i;
         }
     }

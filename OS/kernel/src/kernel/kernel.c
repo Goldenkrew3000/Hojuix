@@ -30,6 +30,10 @@
 #include <i386/asm_functions.h>
 #include <kernel_ext/limine.h>
 #include <drivers/ahci.h>
+#include <drivers/nvme.h>
+#include <drivers/xhci.h>
+#include <fs/guid_pt.h>
+#include <drivers/hda.h>
 
 #include <i386/spinlock.h>
 #include <stdatomic.h>
@@ -140,38 +144,59 @@ void kernel_entry(void) {
     // Initialize IRQ
     irq_init();
 
-    pmmgr_print_bitmap();
-
-    // Print display info to console
-    //printf("Framebuffer Size: %dx", framebuffer->width);
-    //printf("%d\n", framebuffer->height);
-
     // Initialize COM1 @ 115200bps
     //rs232_init(1, 115200);
 
     // Enable interrupts
+    // NOTE: IRQ 0 and 1 are unmasked, others are masked, cannot change that unless in code for now
     asm volatile("sti");
 
     // Initialize the PIT Timer
     pit_timer_init(); // REQUIRED for the AHCI driver
 
     // Initialize PS2 Keyboard
-    //ps2_keyboard_init();
-
-
+    ps2_keyboard_init();
 
     // Initialize ACPI
     //acpi_init();
-
+    
     // Initialize PCI
-    //ata_pio_init();
-    //fat16_fs_test();
+    uintptr_t pci_device_tbl_addr = pci_init();
 
-    
-    
-    // Initialize PCI, find the AHCI controller, and get it's BAR configuration
-    uintptr_t pci_device_tbl_addr = pci_init(); // Initialize the PCI bus and fill the PCI device table
-    int ahci_idx = pci_find_ahci_device(); // Search for an AHCI device in the PCI device table
+    // Initialize NVMe
+    int nvme_idx = pci_find_nvme_device(); // Search for an XHCI controller
+    if (nvme_idx == -ENOENT) {
+        printf("[KERNEL] Could not find NVMe on the PCI bus.\n");
+        kernel_finished(); // TODO KPanic here
+    }
+    uintptr_t nvme_bar_tbl_addr = pci_fetch_bar(nvme_idx);
+    int rc = nvme_init(nvme_bar_tbl_addr);
+    printf("NVME done\n");
+
+    int hda_idx = pci_find_hda_device(); // Search for an XHCI controller
+    if (hda_idx == -ENOENT) {
+        printf("[KERNEL] Could not find HDA on the PCI bus.\n");
+        kernel_finished(); // TODO KPanic here
+    }
+    uintptr_t hda_bar_tbl_addr = pci_fetch_bar(hda_idx);
+    hda_init(hda_bar_tbl_addr);
+    printf("HDA done\n");
+
+    uintptr_t pages = pmmgr_kmalloc_contiguous(11500);
+    printf("Page loc: %llx\n", pages);
+    //rc = nvme_read((pages + 0xFFFF800000000000), 0, 20000);
+
+    hda_play_pcm_data(pages);
+
+    // Read the GUID Partition Table (LBA 0 - 33)
+    //uintptr_t guid_pt_buf = pmmgr_kmalloc_contiguous(5) + 0xFFFF800000000000;
+    //memset((uint8_t*)guid_pt_buf, 0x00, 4096 * 5);
+    //rc = nvme_read(guid_pt_buf, 0, 33);
+    //guid_pt_parse(guid_pt_buf);
+/*
+#if USING_AHCI
+    // Find AHCI controller
+    int ahci_idx = pci_find_ahci_device();
     if (ahci_idx == -ENOENT) {
         printf("[KERNEL] Could not find AHCI controller on the PCI bus.\n");
         kernel_finished(); // TODO KPanic here
@@ -185,46 +210,47 @@ void kernel_entry(void) {
         kernel_finished(); // TODO KPanic here
     }
 
-    // Read a single sector, at LBA 0 (512 bytes), into the buffer from SATA Port 3
-    uintptr_t sector_buffer = pmmgr_kmalloc(1);
-    sector_buffer += 0xFFFF800000000000;
-    i386_memset((uint8_t*)sector_buffer, 0x00, 4096);
-    rc = ahci_read(3, sector_buffer, 0, 1);
+    // Parse the GUID Partition Table (LBA 0 - 33)
+    int port = 0;
+    uintptr_t guid_pt_buf = pmmgr_kmalloc_contiguous(5); guid_pt_buf += 0xFFFF800000000000;
+    memset((uint8_t*)guid_pt_buf, 0x00, 4096 * 5);
+    rc = ahci_read(port, guid_pt_buf, 0, 33);
+    guid_pt_parse(guid_pt_buf);
+#endif
 
-    // Print out LBA 0 to the TTY
-    uint8_t* sector_buffer_ptr = (uint8_t*)sector_buffer;
-    for (size_t i = 0; i < 512; i++) {
-        printf("%.2x ", sector_buffer_ptr[i]);
-        if ((i+1) % 32 == 0) {
-            printf("\n");
-        }
+
+
+
+#if XHCI
+    int xhci_idx = pci_find_xhci_device(); // Search for an XHCI controller
+    if (xhci_idx == -ENOENT) {
+        printf("[KERNEL] Could not find XHCI controller on the PCI bus.\n");
+        kernel_finished(); // TODO KPanic here
     }
-    printf("\n");
+    uintptr_t xhci_bar_tbl_addr = pci_fetch_bar(xhci_idx);
+    xhci_init(xhci_bar_tbl_addr);
+#endif
 
+#if HDA
+    //ata_pio_init();
+    //fat16_fs_test();
 
-
+    int hda_idx = pci_find_hda_device(); // Search for an XHCI controller
+    if (hda_idx == -ENOENT) {
+        printf("[KERNEL] Could not find HDA on the PCI bus.\n");
+        kernel_finished(); // TODO KPanic here
+    }
+    uintptr_t hda_bar_tbl_addr = pci_fetch_bar(hda_idx);
+    hda_init(hda_bar_tbl_addr);
+    hda_play_pcm_data();
+#endif
     
-    
 
-    //nvme_init();
-    //dump_first_sector();
-    //ac97_init();
-    //generate_tone(500, 50000);
-    //play_large_buffer();
-    //for (volatile int i = 0; i < 1000000; i++);
-    
-
-    // WORKING - Attempt to retrieve a pci device from the pci device table
-    //struct t_pci_device *pci_device_a = (struct t_pci_device*)(kerndata.pci_devices_addr + (uint64_t)(0x9 * 1));
-    //printf("Device Vendor: %x\n", pci_device_a->device_id);
-
-    /*
-    printf("SPLK test start\n");
-    spinlock_t sl = SPINLOCK_INIT;
-    spinlock_acquire(&sl.lock);
-    printf("SPLK test end\n");
-    spinlock_release(&sl.lock);
     */
+
+
+
+
 
     //ata_pio_init();
     //fat16_fs_test();
@@ -288,3 +314,11 @@ void run_usermode() {
         : "r14", "r15", "memory"
     );
 }
+
+        /*
+    printf("SPLK test start\n");
+    spinlock_t sl = SPINLOCK_INIT;
+    spinlock_acquire(&sl.lock);
+    printf("SPLK test end\n");
+    spinlock_release(&sl.lock);
+    */
