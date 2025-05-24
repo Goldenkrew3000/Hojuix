@@ -1,10 +1,13 @@
 # Hojuix build script
 
 # Use GCC 15.1.0 x86_64-elf cross compiler
-export PATH="/home/user/Developer/Hojuix/CrossCompiler/output/bin:$PATH"
+export PATH="/home/user/Developer/Hojuix/CrossCompiler/x86_64-output/bin:$PATH"
 CC="x86_64-elf-gcc"
 LD="x86_64-elf-ld"
 OBJCPY="x86_64-elf-objcopy"
+
+# Kernel Object
+KERNOBJ="vmbsd"
 
 # Print GCC version
 $CC --version
@@ -21,6 +24,7 @@ mkdir obj/i386
 mkdir obj/kernel
 mkdir obj/memory
 mkdir obj/drivers
+mkdir obj/drivers/sound
 mkdir obj/drivers/i386
 mkdir obj/fs
 mkdir obj/process
@@ -48,6 +52,9 @@ $CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/ata_pio.c -o obj/drivers/ata_pio
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/nvme.c -o obj/drivers/nvme.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/xhci.c -o obj/drivers/xhci.o
 
+# Sound Driver Files
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/sound/hojuix_hda.c -o obj/drivers/sound/hojuix_hda.o
+
 # i386 Driver files
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/i386/rtc.c -o obj/drivers/i386/rtc.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/i386/pit_timer.c -o obj/drivers/i386/pit_timer.o
@@ -58,6 +65,7 @@ $CC $CFLAGS $LINK $INCL -MMD -MP -c src/memory/pmmgr.c -o obj/memory/pmmgr.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/memory/vmmgr.c -o obj/memory/vmmgr.o
 
 # Filesystem files
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/fs/ext2.c -o obj/fs/ext2.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/fs/fat16.c -o obj/fs/fat16.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/fs/guid_pt.c -o obj/fs/guid_pt.o
 
@@ -95,16 +103,18 @@ obj/drivers/ps2_keyboard.o \
 obj/drivers/ata_pio.o \
 obj/drivers/nvme.o \
 obj/drivers/xhci.o \
+obj/drivers/hda.o \
 obj/drivers/i386/rtc.o \
 obj/drivers/i386/pit_timer.o \
 obj/drivers/i386/intel_hrng.o \
 obj/memory/pmmgr.o \
 obj/memory/vmmgr.o \
 obj/fs/fat16.o \
+obj/fs/ext2.o \
 obj/fs/guid_pt.o \
 obj/process/syscall.o \
 obj/process/elf.o \
 obj/misc/kpanic.o \
 obj/kernel/cc-runtime.o \
 obj/kernel/kernel.o \
-$LINKFLAGS -o kernel.macho
+$LINKFLAGS -o $KERNOBJ
