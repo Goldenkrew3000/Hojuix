@@ -5,6 +5,10 @@ In the state that this project is in, PLEASE DO NOT use this as a reference for 
 It is a miracle that this codebase works at all.<br>
 This notice will be removed ONLY when I am confident that this would be a good resource to others.
 
+# Licensing Notes
+Everything in this repository is licensed as GPLv3 **UNLESS SPECIFIED OTHERWISE** in the file. <br>
+There is code ported from other operating systems (most notably NetBSD) which retains it's original license, which is present in said files.
+
 # Notes
 - Libk is currently built separate from the 64 bit kernel, but does not have to be moved
 
