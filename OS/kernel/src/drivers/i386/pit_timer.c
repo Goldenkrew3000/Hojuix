@@ -1,10 +1,10 @@
 #include <stddef.h>
 #include <stdint.h>
-#include <stdio.h>
+#include <kern/kprintf.h>
 #include <kernel.h>
-#include <i386/idt.h>
-#include <i386/irq.h>
-#include <i386/io.h>
+#include <arch/amd64/idt.h>
+#include <arch/amd64/irq.h>
+#include <arch/amd64/io.h>
 #include <drivers/i386/pit_timer.h>
 
 long PIT_timer_ticks = 0;

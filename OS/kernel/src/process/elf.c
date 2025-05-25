@@ -6,10 +6,10 @@
 */
 
 #include <stdint.h>
-#include <stdio.h>
+#include <kern/kprintf.h>
 #include <process/elf.h>
 #include <memory/vmmgr.h>
-#include <i386/asm_functions.h>
+#include <arch/amd64/asm_functions.h>
 
 uintptr_t program_header_addr;
 uintptr_t section_header_addr;

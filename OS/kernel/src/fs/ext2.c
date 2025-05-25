@@ -1,4 +1,4 @@
-#include <stdio.h>
+#include <kern/kprintf.h>
 #include <fs/ext2.h>
 #include <drivers/nvme.h>
 #include <memory/pmmgr.h>
@@ -66,6 +66,7 @@ int ext2_init(uint64_t partition_offset) {
         // SPECIAL handling needed TODO
     }
     
+#if AAA
     uintptr_t block_group_descriptor_table_addr = pmmgr_kmalloc_contiguous(1) + 0xFFFF800000000000; // TODO calc size
     memset((uint8_t*)block_group_descriptor_table_addr, 0x00, 4096);
     nvme_read(block_group_descriptor_table_addr, partition_offset + (superblock_block_size / 512), 1);
@@ -75,16 +76,57 @@ int ext2_init(uint64_t partition_offset) {
     }
 
     // TEST get inode
-    int inode = 2;
-    uint32_t inode1 = (inode - 1) / superblock->s_inodes_per_group;
-    printf("Block Group: %ld\n", inode1);
-    uint32_t index = (inode - 1) % superblock->s_inodes_per_group;
-    uint32_t block = (index * superblock->s_inode_size) / superblock_block_size;
-    printf("Index: %ld\nBlock: %ld\n", index, block);
+    int inode = 2; // Root dir inode
+    /*
+    uint32_t inode_table = block_group_descriptor_table->block_group_descriptor_array[0].bg_inode_table;
+    uint32_t index_in_group = (inode - 1) % superblock->s_inodes_per_group;
+    uint32_t inode_offset = index_in_group * sizeof(EXT2_InodeDataStructure_t);
 
-    uint8_t* aa = (uint8_t*)block_group_descriptor_table_addr;
-    for (size_t i = 0; i < 256; i++) {
-        printf("%.2x ", aa[i]);
-        if (i % 48 == 0) { printf("\n"); }
+    uint32_t inodes_per_block = superblock_block_size / sizeof(EXT2_InodeDataStructure_t);
+    uint32_t target_block = inode_table + (inode_offset / superblock_block_size);
+    uint32_t offset_in_block = inode_offset % superblock_block_size;*/
+    printf("Inode size: %ld\n", superblock->s_inode_size);
+
+    uint32_t block_group = (inode - 1) / superblock->s_inodes_per_group;
+    uint32_t local_inode_index = (inode - 1) % superblock->s_inodes_per_group;
+    
+    // Offset of inode table in blocks
+    uint32_t inode_table = block_group_descriptor_table->block_group_descriptor_array[block_group].bg_inode_table;
+
+
+    // Read in block
+    uintptr_t block_addr = pmmgr_kmalloc_contiguous(1) + 0xFFFF800000000000;
+    memset((uint8_t*)block_addr, 0x00, 4096);
+    nvme_read(block_addr, partition_offset + (inode_table * 8), 8); // Read the inode block
+
+    //printf("Block addr: %lx\n", block_addr);
+    //printf("Offset in block: %ld\n", offset_in_block);
+    
+    EXT2_InodeDataStructure_t* root_inode = (EXT2_InodeDataStructure_t*)(block_addr + (local_inode_index * superblock->s_inode_size));
+    if ((root_inode->i_mode & 0xF000) != 0x4000) {
+        printf("Root inode is not a directory!");
+    } else { printf("yippee!\n"); }
+
+    printf("Mode: %lx, Size: %lx\n", root_inode->i_mode, root_inode->i_size);
+
+    // Read through the 12 block pointers
+    uintptr_t block_b_addr = pmmgr_kmalloc_contiguous(1) + 0xFFFF800000000000;
+    for (size_t i = 0; i < 12; i++) {
+        memset((uint8_t*)block_b_addr, 0x00, 4096);
+        nvme_read(block_b_addr, partition_offset + (root_inode->i_block[i] * 8), 8);
+        EXT2_Directory_t* dir = (EXT2_Directory_t*)block_b_addr;
+
+        // Skip null entries (unused)
+        if (dir->inode != 0) {
+            printf("found!\n");
+            printf("Name: %s\n", dir->name);
+        } 
     }
+
+    uint8_t* aa = (uint8_t*)block_addr;
+    for (size_t i = 0; i < 384; i++) {
+        printf("%.2x ", aa[i]);
+        if (i != 0 && i % 48 == 0) { printf("\n"); }
+    }
+#endif
 }

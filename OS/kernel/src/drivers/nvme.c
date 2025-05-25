@@ -6,21 +6,25 @@
 */
 
 // NOTE: This driver explicitly only works with NVMe drives with their partitions on namespace 1 (Which is every drive I have tested).
+// NOTE: This driver ONLY works with a system page size of 4096 bytes and a drive LBA size of 512 bytes (which is extremely common)
+// NOTE: This driver reads into CONTIGUOUS PHYSICAL MEMORY
 
-#include <stdio.h>
+#include <kern/kprintf.h>
 #include <drivers/nvme.h>
 #include <memory/pmmgr.h>
 #include <memory/vmmgr.h>
 #include <drivers/pci.h>
-#include <i386/asm_functions.h>
+#include <arch/amd64/asm_functions.h>
 
 // Globals
 uint32_t spin = 0;
 int rc = 0;
+uint64_t max_prps = 0;
 uint64_t nvme_base_addr = 0;
 volatile uint32_t* nvme_mmio;
 struct nvme_queue admin_queue;
 struct nvme_queue ns_queue;
+uintptr_t ns1_io_queue_regpgs = 0;
 
 int nvme_init(uintptr_t bar_tbl_addr) {
     // Get the PCI BAR Table
@@ -90,7 +94,7 @@ int nvme_init(uintptr_t bar_tbl_addr) {
     admin_queue.elements = queue_slots;
     admin_queue.queue_id = admin_queue_id;
     admin_queue.cmd_id = 0;
-    admin_queue.phys_regpgs = NULL;
+    admin_queue.phys_regpgs = 0; // Should be null?
 
     // Assign admin queue
     uint32_t admin_queue_attrs = queue_slots - 1;
@@ -185,13 +189,28 @@ int nvme_init(uintptr_t bar_tbl_addr) {
     nvme_identify_nsx_cns0_t* identify_ns1 = (nvme_identify_nsx_cns0_t*)(identify_ns1_buffer + 0xFFFF800000000000);
     printf("[NVMe] Namespace 1 Size (LBAs/GBs): %lld LBAs / %lld GBs\n", identify_ns1->nsze, ((identify_ns1->nsze * 512) / 1024 / 1024 / 1024));
 
+    // Calculate some needed stuff
+    size_t shift = 12 + CAP_MIN_PAGE_SIZE(capabilities);
+    size_t max_trans_shift = 0;
+    if (identify_ns0->mdts) {
+        max_trans_shift = shift + identify_ns0->mdts;
+    } else {
+        max_trans_shift = 20;
+    }
+    uint64_t formatted_lba = identify_ns1->flbas & 0x0f;
+    uint64_t lba_shift = identify_ns1->lbaf[formatted_lba].lba_data_size;
+    uint64_t max_lba_size = 1 << (max_trans_shift - lba_shift);
+    max_prps = (max_lba_size * (1 << lba_shift)) / PAGE_SIZE;
+    printf("[NVMe] Max PRPs: %lld\n", max_prps);
+
     // Create and assign IO SQ/CQ Queues to Namespace 1
     int queue_id = 1; // Namespace ID
-    uintptr_t ns1_io_queue_submit_addr = pmmgr_kmalloc_contiguous(4) + 0xFFFF800000000000; // TODO Not sure of the size
-    uintptr_t ns1_io_queue_completion_addr = pmmgr_kmalloc_contiguous(4) + 0xFFFF800000000000; // TODO Not sure of the size
-    printf("ns1 comp: %llx\n", ns1_io_queue_completion_addr);
-    memset((uint8_t*)ns1_io_queue_submit_addr, 0x00, 4096 * 4); // TODO Not sure of the size
-    memset((uint8_t*)ns1_io_queue_completion_addr, 0x00, 4096 * 4); // TODO Not sure of the size
+    uintptr_t ns1_io_queue_submit_addr = pmmgr_kmalloc_contiguous(16) + 0xFFFF800000000000; // TODO Not sure of the size
+    uintptr_t ns1_io_queue_completion_addr = pmmgr_kmalloc_contiguous(16) + 0xFFFF800000000000; // TODO Not sure of the size
+    ns1_io_queue_regpgs = pmmgr_kmalloc_contiguous(16); // not sure
+    i386_memset((uint8_t*)ns1_io_queue_submit_addr, 0x00, 4096 * 16); // TODO Not sure of the size
+    i386_memset((uint8_t*)ns1_io_queue_completion_addr, 0x00, 4096 * 16); // TODO Not sure of the size
+    i386_memset((uint8_t*)(ns1_io_queue_regpgs + 0xFFFF800000000000), 0x00, 4096 * 16); // not sure
     ns_queue.submit = (struct nvme_cmd*)ns1_io_queue_submit_addr;
 	ns_queue.submit_db = (nvme_base_addr + PAGE_SIZE + (2 * queue_id * (4 << stride)));
 	ns_queue.sq_head = 0;
@@ -204,7 +223,9 @@ int nvme_init(uintptr_t bar_tbl_addr) {
 	ns_queue.elements = queue_slots;
 	ns_queue.queue_id = queue_id;
 	ns_queue.cmd_id = 0;
-	ns_queue.phys_regpgs = (uint64_t*)pmmgr_kmalloc_contiguous(4); // TODO not sure of the size
+	//ns_queue.phys_regpgs = (uint64_t*)ns1_io_queue_regpgs;
+    //ns_queue.phys_regpgs = (uint64_t)ns1_io_queue_regpgs;
+
     
     struct nvme_cmd ns1_io_queue_completion_cmd = {0};
 	ns1_io_queue_completion_cmd.createcompq.opcode = NVME_OPCODE_ADMIN_CREATE_CQ;
@@ -276,20 +297,15 @@ int nvme_submit_wait_cmd(struct nvme_queue* queue, struct nvme_cmd cmd) {
 	return status;
 }
 
-int nvme_read(uintptr_t buffer, uint32_t start_lba, uint32_t lba_count) {
-    // PRP-less method for testing
-    // 1 PRP allows for a 4096 byte (8 LBAs of read)
-    int remainder = lba_count % 8;
-    int full_reads = (lba_count - remainder) / 8;
-    printf("[NVMe] %d full reads with %d sectors left.\n", full_reads, remainder);
-    printf("BFR: %llx\n", buffer);
+struct nvme_prp_list {
+    uint64_t entries[PAGE_SIZE / sizeof(uint64_t)]; // 512 entries per page
+};
 
-    uintptr_t curr_buffer = buffer;
-    uint64_t curr_lba = start_lba;
-    
-    struct nvme_cmd read_cmd = {0};
-    for (size_t i = 0; i < full_reads; i++) {
-        //printf("Read: %llx -- %d\n", curr_buffer, curr_lba);
+// Main NVMe read function. Buffer is a virtual address
+int nvme_read(uintptr_t buffer, uint32_t start_lba, uint32_t lba_count) {
+    if (lba_count <= 8) {
+        // Single page read
+        struct nvme_cmd read_cmd = {0};
         read_cmd.rw.opcode = NVME_OPCODE_READ;
         read_cmd.rw.flags = 0;
         read_cmd.rw.nsid = 1;
@@ -299,61 +315,66 @@ int nvme_read(uintptr_t buffer, uint32_t start_lba, uint32_t lba_count) {
         read_cmd.rw.apptag = 0;
         read_cmd.rw.appmask = 0;
         read_cmd.rw.metadata = 0;
-        read_cmd.rw.slba = curr_lba;
-        read_cmd.rw.len = 7;
-        read_cmd.rw.prp1 = (uint64_t)(curr_buffer - 0xFFFF800000000000);
+        read_cmd.rw.slba = start_lba;
+        read_cmd.rw.len = lba_count - 1;
+        read_cmd.rw.prp1 = (uint64_t)(buffer - 0xFFFF800000000000);
         nvme_submit_wait_cmd(&ns_queue, read_cmd);
-        curr_buffer += 4096;
-        curr_lba += 8;
-    }
-    /*
-    ahci_read_internal(port, curr_buffer, curr_lba, remainder);
+    } else if (lba_count <= 16) {
+        // 2 page read (NOTE: NOT TESTED)
+        struct nvme_cmd read_cmd = {0};
+        read_cmd.rw.opcode = NVME_OPCODE_READ;
+        read_cmd.rw.flags = 0;
+        read_cmd.rw.nsid = 1;
+        read_cmd.rw.control = 0;
+        read_cmd.rw.dsmgmt = 0;
+        read_cmd.rw.ref = 0;
+        read_cmd.rw.apptag = 0;
+        read_cmd.rw.appmask = 0;
+        read_cmd.rw.metadata = 0;
+        read_cmd.rw.slba = start_lba;
+        read_cmd.rw.len = lba_count - 1;
+        read_cmd.rw.prp1 = (uint64_t)(buffer - 0xFFFF800000000000);
+        read_cmd.rw.prp2 = (uint64_t)(buffer - 0xFFFF800000000000) + PAGE_SIZE;
+        nvme_submit_wait_cmd(&ns_queue, read_cmd);
+    } else {
+        // First use of PRPs, im fucked here aren't I
+        size_t prp_count = ((lba_count - 1) * 512) / PAGE_SIZE;
+        //printf("PRP count: %ld\n", prp_count);
+        if (prp_count > max_prps) {
+            printf("[NVMe] Read is over maximum PRP count.\n");
+            return EXIT_FAILURE;
+        } else {
+            //printf("Performing PRP read.\n");
+        }
 
-    for (size_t i = 0; i < lba_count)
+        struct nvme_cmd read_cmd = {0};
+        read_cmd.rw.opcode = NVME_OPCODE_READ;
+        read_cmd.rw.flags = 0;
+        read_cmd.rw.nsid = 1;
+        read_cmd.rw.control = 0;
+        read_cmd.rw.dsmgmt = 0;
+        read_cmd.rw.ref = 0;
+        read_cmd.rw.apptag = 0;
+        read_cmd.rw.appmask = 0;
+        read_cmd.rw.metadata = 0;
+        read_cmd.rw.slba = start_lba;
+        read_cmd.rw.len = lba_count - 1;
+        read_cmd.rw.prp1 = (uint64_t)buffer - 0xFFFF800000000000;
+        
+        uint64_t* regpgs_virt = (uint64_t*)(ns1_io_queue_regpgs + 0xFFFF800000000000);
+        for (size_t i = 0; i < prp_count; i++) {
+            regpgs_virt[i] = (buffer - 0xFFFF800000000000) + (i * PAGE_SIZE) + PAGE_SIZE;
+        }
+        read_cmd.rw.prp2 = (uint64_t)ns1_io_queue_regpgs; // TODO zero page before modifying it (prp page)
+        
+        nvme_submit_wait_cmd(&ns_queue, read_cmd);
+    }
+
     
-	read_cmd.rw.opcode = NVME_OPCODE_READ;
-	read_cmd.rw.flags = 0;
-	read_cmd.rw.nsid = 1;
-	read_cmd.rw.control = 0;
-	read_cmd.rw.dsmgmt = 0;
-	read_cmd.rw.ref = 0;
-	read_cmd.rw.apptag = 0;
-	read_cmd.rw.appmask = 0;
-	read_cmd.rw.metadata = 0;
-	read_cmd.rw.slba = start_lba;
-	read_cmd.rw.len = lba_count - 1;
-    read_cmd.rw.prp1 = (uint64_t)buffer;
-    //cmd5.rw.prp2 = 0;
-    nvme_submit_wait_cmd(&ns_queue, read_cmd);*/
+    
     return EXIT_SUCCESS;
     // TODO Return code
 }
-
-/*
-int ahci_read(int port, uintptr_t buffer, uint64_t lba_start, uint32_t sector_count) {
-    printf("[AHCI] Reading %ld sectors on port %d.\n", sector_count, port);
-    
-    if (sector_count > 128) {
-        // Split read into 128 sector chunks
-        int remainder = sector_count % 128;
-        int full_reads = (sector_count - remainder) / 128;
-        printf("%d full reads with %d sectors left.\n", full_reads, remainder);
-
-        uintptr_t curr_buffer = buffer;
-        uint64_t curr_lba = lba_start;
-        for (size_t i = 0; i < full_reads; i++) {
-            ahci_read_internal(port, curr_buffer, curr_lba, 128);
-            curr_buffer += 65536;
-            curr_lba += 128;
-        }
-        ahci_read_internal(port, curr_buffer, curr_lba, remainder);
-    } else {
-        // Size is under 64kb, read normally
-        ahci_read_internal(port, buffer, lba_start, sector_count);
-    }
-}
-*/
-
 
 /*
 // MMIO Functions (TODO Unify across the kernel)

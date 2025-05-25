@@ -1,4 +1,4 @@
-#include <stdio.h>
+#include <kern/kprintf.h>
 #include <drivers/xhci.h>
 #include <drivers/pci.h>
 #include <memory/vmmgr.h>

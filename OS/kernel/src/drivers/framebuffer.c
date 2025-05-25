@@ -1,12 +1,11 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
+#include <kern/kprintf.h>
+#include <kern/libkern.h>
 #include <drivers/framebuffer.h>
 #include <memory/pmmgr.h>
-#include <i386/asm_functions.h>
+#include <arch/amd64/asm_functions.h>
 #include <kernel_ext/limine.h>
 
 #define SSFN_CONSOLEBITMAP_TRUECOLOR // Simple implementation
@@ -84,8 +83,8 @@ void framebuffer_ssfn_init(struct limine_framebuffer *fb) {
     long total_size = g_fb->height * g_fb->pitch;
     total_size = (g_fb->height * g_fb->pitch); // - (g_fb->pitch * 32); This was to make sure I wasn't overwriting outside of framebuffer space
     g_fb_size = total_size;
-    back_fb = (uint32_t*)((uintptr_t)pmmgr_kmalloc(DIV_ROUND_UP(total_size, 4096)) + (uintptr_t)0xFFFF800000000000);
-    i386_memset(back_fb, 0xAA, g_fb_size);
+    //back_fb = (uint32_t*)((uintptr_t)pmmgr_kmalloc(DIV_ROUND_UP(total_size, 4096)) + (uintptr_t)0xFFFF800000000000);
+    //i386_memset(back_fb, 0xAA, g_fb_size);
 
     // Can only implement the proper one once I have libc의 realloc and free
     ssfn_src = (ssfn_font_t*)&_binary_unifont_sfn_start;

@@ -1,7 +1,10 @@
 # Libk/c builder ported from bare bones 32bit
+# BSD/Hojuix LibK build script
 
-CC="gcc"
-AR="ar"
+export PATH="/home/user/Developer/Hojuix/CrossCompiler/x86_64-output/bin:$PATH"
+CC="x86_64-elf-gcc"
+AR="x86_64-elf-ar"
+
 CFLAGS="-m64 -std=gnu11 -g -ffreestanding -Wall -Wextra -fno-stack-protector -fno-stack-check"
 INCLUDE="-I ../common -I ../kernel/src/include -I include"
 

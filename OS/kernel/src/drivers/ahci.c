@@ -4,14 +4,13 @@
 // GPLv3
 */
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
+#include <kern/kprintf.h>
+#include <kern/libkern.h>
 #include <drivers/ahci.h>
 #include <drivers/pci.h>
 #include <memory/vmmgr.h>
 #include <memory/pmmgr.h>
-#include <i386/asm_functions.h>
+#include <arch/amd64/asm_functions.h>
 #include <drivers/i386/pit_timer.h>
 
 hba_mem_t* hba_mem;

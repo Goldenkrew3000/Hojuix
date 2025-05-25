@@ -1,7 +1,7 @@
 #ifndef _NVME_H
 #define _NVME_H
 #include <stddef.h>
-#include <string.h>
+#include <kern/libkern.h>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -131,6 +131,7 @@ struct nvme_queue {
     uint16_t queue_id;	   // queue id
     uint32_t cmd_id;	   // command id
     uint64_t *phys_regpgs; // pointer to the PRPs
+    //uint64_t phys_regpgs;
 };
 
 // Rest of the structs are made by me
@@ -165,16 +166,45 @@ typedef struct { // NVM Express Base Specification Rev 1.2 Page 296 (5.1.13.2.1)
     uint32_t nn;
 } __attribute__((packed)) nvme_identify_ns0_t; // NVMe Identify Namespace 0 (CNS 1)
 
+struct nvme_lbaf {
+	uint16_t metadata_size;
+	uint8_t lba_data_size;
+	uint8_t relative_performance;
+};
+
 typedef struct { // NVM Express NVM Command Set Specification Rev 1.1 Page 80 (Figure 114)
     uint64_t nsze;          // Namespace Size (in LBAs)
     uint64_t ncap;          // Namespace Capacity (in LBAs)
     uint64_t nuse;          // Namespace Utilization
+    uint8_t features; // TODO CHANGE FROM HERE
+    uint8_t nlbaf;
+    uint8_t flbas;
+	uint8_t mc;
+	uint8_t dpc;
+	uint8_t dps;
+	uint8_t nmic;
+	uint8_t rescap;
+	uint8_t fpi;
+	uint8_t unused1;
+	uint16_t nawun;
+	uint16_t nawupf;
+	uint16_t nacwu;
+	uint16_t nabsn;
+	uint16_t nabo;
+	uint16_t nabspf;
+	uint16_t unused2;
+	uint64_t nvmcap[2];
+	uint64_t unusued3[5];
+	uint8_t nguid[16];
+	uint8_t eui64[8];
+    struct nvme_lbaf lbaf[16];
 } __attribute__((packed)) nvme_identify_nsx_cns0_t; // NVMe Identify NSx CNS 0
 
 // NVME -
 #define CAP_MAX_ENTRIES(cap) ((cap) & 0xffff)
 #define CAP_DOORBELL_STRIDE(cap) (((cap) >> 32) & 0xf)
 #define CAP_COMMAND_SET(cap) (((cap) >> 37) & 0xff)
+#define CAP_MIN_PAGE_SIZE(cap) (((cap) >> 48) & 0xf)
 
 // NVME -
 #define CC_COMMANDSET_NVM (0 << 4)

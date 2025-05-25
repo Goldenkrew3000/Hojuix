@@ -44,6 +44,6 @@ typedef struct {
     GUID_Partition_Entry_t part_entries[128]; // Maximum of 128 partitions
 } __attribute__((packed)) GUID_t;
 
-void guid_pt_parse(uintptr_t guid_pt_addr);
+uint64_t guid_pt_parse(uintptr_t guid_pt_addr);
 
 #endif

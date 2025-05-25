@@ -200,6 +200,7 @@ typedef struct {
 void acpi_init();
 void acpi_handle_xsdt(uintptr_t xsdt_addr);
 void acpi_handle_fadt(uintptr_t fadt_addr);
+void acpi_reboot();
 void acpi_handle_madt(uintptr_t madt_addr);
 void acpi_shutdown();
 

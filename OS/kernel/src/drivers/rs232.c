@@ -1,13 +1,12 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <kern/kprintf.h>
+#include <kern/libkern.h>
 #include <kernel.h>
-#include <i386/io.h>
-#include <i386/idt.h>
-#include <i386/irq.h>
+#include <arch/amd64/io.h>
+#include <arch/amd64/idt.h>
+#include <arch/amd64/irq.h>
 #include <drivers/rs232.h>
 
 // TODO: Add a check to make sure that the UART port is initialized before trying to read / write to it. (Just probably a boolean for each)

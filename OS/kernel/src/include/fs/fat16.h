@@ -61,10 +61,10 @@ typedef struct {
     uint16_t start_cluster;
 } fat16_file_t; // Files found in the filesystem
 
-void fat16_fs_test();
+uintptr_t fat16_fs_test(uint64_t start_lba);
 void fat16_read_in_exec_file(char* filename);
 void fat16_parse_bootsector(uintptr_t addr);
-void fat16_read_root_directory();
-void fat16_read_file(uint16_t start_cluster, uint16_t filesize);
+void fat16_read_root_directory(uint64_t start_lba);
+uintptr_t fat16_read_file(uint64_t start_lba, uint16_t start_cluster, uint32_t filesize);
 
 #endif

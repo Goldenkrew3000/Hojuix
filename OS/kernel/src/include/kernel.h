@@ -1,6 +1,6 @@
 #ifndef _KERNEL_H
 #define _KERNEL_H
-#include <i386/idt.h>
+#include <arch/amd64/idt.h>
 #include <drivers/pci.h>
 #include <kernel_ext/limine.h>
 #include <errno.h>
@@ -19,7 +19,7 @@
 #define EXIT_SUCCESS 0x0
 #define EXIT_FAILURE 0x1
 
-void run_usermode();
+void run_usermode(uintptr_t elf_addr);
 void kernel_finished();
 
 typedef struct {

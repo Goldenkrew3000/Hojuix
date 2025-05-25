@@ -7,14 +7,13 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
+#include <kern/kprintf.h>
+#include <kern/libkern.h>
 #include <kernel.h>
-#include <i386/io.h>
+#include <arch/amd64/io.h>
 #include <drivers/pci.h>
 #include <memory/pmmgr.h>
-#include <i386/asm_functions.h>
+#include <arch/amd64/asm_functions.h>
 
 // PCI Device Table
 pci_device_table_t* pci_device_table;

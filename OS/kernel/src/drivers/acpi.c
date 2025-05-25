@@ -5,11 +5,10 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
+#include <kern/kprintf.h>
+#include <kern/libkern.h>
 #include <drivers/acpi.h>
-#include <i386/io.h>
+#include <arch/amd64/io.h>
 #include <memory/vmmgr.h>
 #include <kernel_ext/limine.h>
 
@@ -85,13 +84,13 @@ void acpi_handle_xsdt(uintptr_t xsdt_addr) {
         if (memcmp(table->signature, "FACP", 4) == 0) {
             // Found the FACP / FADT Table
             //printf("FADT addr: %p\n", table_array[i]);
-            //acpi_handle_fadt((uintptr_t)table_array[i] + hhdt_offset); // FADT is for Power Management (https://wiki.osdev.org/FADT)
+            acpi_handle_fadt((uintptr_t)table_array[i] + hhdt_offset); // FADT is for Power Management (https://wiki.osdev.org/FADT)
         }
 
         if (memcmp(table->signature, "APIC", 4) == 0) {
             // Found the APIC / MADT Table
-            acpi_handle_madt((uintptr_t)table_array[i] + hhdt_offset); // MADT is for Clocks / Interrupts (https://wiki.osdev.org/MADT)
-            printf("MADT Addr: %p\n", table_array[i]);
+            //acpi_handle_madt((uintptr_t)table_array[i] + hhdt_offset); // MADT is for Clocks / Interrupts (https://wiki.osdev.org/MADT)
+            //printf("MADT Addr: %p\n", table_array[i]);
         }
 
         if (memcmp(table->signature, "SSDT", 4) == 0) {
@@ -109,6 +108,8 @@ void acpi_handle_xsdt(uintptr_t xsdt_addr) {
         */
 }
 
+uint8_t acpi_reboot_val;
+uintptr_t acpi_reboot_reg;
 void acpi_handle_fadt(uintptr_t fadt_addr) {
     // Load the FADT pointer into the FADT struct
     FADT_t* fadt = (FADT_t*)fadt_addr;
@@ -116,15 +117,21 @@ void acpi_handle_fadt(uintptr_t fadt_addr) {
     //fadt = (FADT_t*)fadt_table_addr;
 
     
-    printf("FADT sig: %p\n", fadt->reset_reg.address);
-    printf("Reser val: %.2x\n", fadt->reset_value);
+    //printf("FADT sig: %p\n", fadt->reset_reg.address);
+    //printf("Reser val: %.2x\n", fadt->reset_value);
+    acpi_reboot_val = fadt->reset_value;
     uintptr_t reset_reg_final = fadt->reset_reg.address + hhdt_offset;
-    printf("final addr: %p\n", reset_reg_final);
+    acpi_reboot_reg = reset_reg_final;
+    //printf("final addr: %p\n", reset_reg_final);
 
-    printf("ACPI rebooting in 5 seconds...");
+    //printf("ACPI rebooting in 5 seconds...");
     //timer_wait(5000);
-    for (size_t i = 0; i < 1000000000; i++) { asm volatile("nop"); }
-    out8(reset_reg_final, fadt->reset_value);
+    //for (size_t i = 0; i < 1000000000; i++) { asm volatile("nop"); }
+    //out8(reset_reg_final, fadt->reset_value);
+}
+
+void acpi_reboot() {
+    out8(acpi_reboot_reg, acpi_reboot_val);
 }
 
 void acpi_handle_madt(uintptr_t madt_addr) {
@@ -132,9 +139,9 @@ void acpi_handle_madt(uintptr_t madt_addr) {
     uintptr_t madt_max_addr = madt_addr + (uintptr_t)madt->acpi_header.length;
 
 
-    printf("Local APIC Address: 0x%lx\n", madt->local_apic_addr);
-    printf("Local APIC Flags: %lx\n", madt->local_apic_flags);
-    printf("Length: %d\n", madt->acpi_header.length);
+    //printf("Local APIC Address: 0x%lx\n", madt->local_apic_addr);
+    //printf("Local APIC Flags: %lx\n", madt->local_apic_flags);
+    //printf("Length: %d\n", madt->acpi_header.length);
 
     // Calculate the address of the start of the entries
     uintptr_t madt_entries_start_addr = madt_addr + sizeof(MADT_t);
@@ -153,6 +160,7 @@ void acpi_handle_madt(uintptr_t madt_addr) {
         // Calculate the address of the next entry
         madt_entries_start_addr += entry[1];
 
+        /*
         switch (entry[0]) {
             case 0:
                 printf("APIC Entry Type 0:\n");
@@ -177,7 +185,7 @@ void acpi_handle_madt(uintptr_t madt_addr) {
                 break;
             default:
                 printf("Unknown APIC Entry\n");
-        };
+        };*/
 
         
     }

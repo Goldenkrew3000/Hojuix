@@ -1,2 +1,2 @@
-rm -rf kernel.macho
-rm -rf obj
+rm -rfv vmbsd
+rm -rfv obj

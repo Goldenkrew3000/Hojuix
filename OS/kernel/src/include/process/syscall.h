@@ -66,5 +66,6 @@ void syscall_exit(int rc);
 
 void syscall_open();
 void syscall_exec(char* rdi);
+void syscall_reboot();
 
 #endif

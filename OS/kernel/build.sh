@@ -1,4 +1,4 @@
-# Hojuix build script
+# BSD/Hojuix build script
 
 # Use GCC 15.1.0 x86_64-elf cross compiler
 export PATH="/home/user/Developer/Hojuix/CrossCompiler/x86_64-output/bin:$PATH"
@@ -9,19 +9,16 @@ OBJCPY="x86_64-elf-objcopy"
 # Kernel Object
 KERNOBJ="vmbsd"
 
-# Print GCC version
-$CC --version
-
 CFLAGS="-g -pipe -Wall -Wextra -std=gnu11 -nostdinc -ffreestanding -fno-stack-protector -fno-stack-check -fno-lto -fno-PIC -ffunction-sections -fdata-sections -m64 -march=x86-64 -mno-80387 -mno-mmx -mno-sse -mno-sse2 -mno-red-zone -mcmodel=kernel -isystem freestanding-headers"
-LINK="-L src/libk"
-INCL="-I src/libk/include -I ../common -I src/include"
+INCL="-I ../common -I src/include"
 
-LINKFLAGS="-m elf_x86_64 -nostdlib -lk -static -z max-page-size=0x1000 -gc-sections -T linker-x86_64.ld -L ../libc obj/unifont.o"
+LINKFLAGS="-m elf_x86_64 -nostdlib -static -z max-page-size=0x1000 -gc-sections -T linker-x86_64.ld obj/unifont.o"
 
 # Make needed directories
 mkdir obj
-mkdir obj/i386
-mkdir obj/kernel
+mkdir obj/arch
+mkdir obj/arch/amd64
+mkdir obj/kern
 mkdir obj/memory
 mkdir obj/drivers
 mkdir obj/drivers/sound
@@ -30,16 +27,23 @@ mkdir obj/fs
 mkdir obj/process
 mkdir obj/misc
 
-# i386 / x86_64 specific files
-$CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/gdt.c -o obj/i386/gdt.o
-$CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/idt.c -o obj/i386/idt.o
-$CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/irq.c -o obj/i386/irq.o
-$CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/idt_handler.S -o obj/i386/idt_handler.o
-$CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/memory_functions.S -o obj/i386/memory_functions.o
-$CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/usermode.S -o obj/i386/usermode.o
-$CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/io.c -o obj/i386/io.o
-$CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/spinlock.c -o obj/i386/spinlock.o
-$CC $CFLAGS $LINK $INCL -MMD -MP -c src/i386/cpuinfo.c -o obj/i386/cpuinfo.o
+# /kern
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/kern/cc-runtime.c -o obj/kern/cc-runtime.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/kern/kern_entry.c -o obj/kern/kern_entry.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/kern/kern_kprintf.c -o obj/kern/kern_kprintf.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/kern/kern_cdefs.c -o obj/kern/kern_cdefs.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/kern/extern_printf.c -o obj/kern/extern_printf.o
+
+# /arch/amd64
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/arch/amd64/gdt.c -o obj/arch/amd64/gdt.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/arch/amd64/idt.c -o obj/arch/amd64/idt.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/arch/amd64/irq.c -o obj/arch/amd64/irq.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/arch/amd64/idt_handler.S -o obj/arch/amd64/idt_handler.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/arch/amd64/memory_functions.S -o obj/arch/amd64/memory_functions.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/arch/amd64/usermode.S -o obj/arch/amd64/usermode.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/arch/amd64/io.c -o obj/arch/amd64/io.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/arch/amd64/spinlock.c -o obj/arch/amd64/spinlock.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/arch/amd64/cpuinfo.c -o obj/arch/amd64/cpuinfo.o
 
 # Driver files
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/acpi.c -o obj/drivers/acpi.o
@@ -48,7 +52,6 @@ $CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/ahci.c -o obj/drivers/ahci.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/rs232.c -o obj/drivers/rs232.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/framebuffer.c -o obj/drivers/framebuffer.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/ps2_keyboard.c -o obj/drivers/ps2_keyboard.o
-$CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/ata_pio.c -o obj/drivers/ata_pio.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/nvme.c -o obj/drivers/nvme.o
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/drivers/xhci.c -o obj/drivers/xhci.o
 
@@ -76,34 +79,29 @@ $CC $CFLAGS $LINK $INCL -MMD -MP -c src/process/elf.c -o obj/process/elf.o
 # Misc files
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/misc/kpanic.c -o obj/misc/kpanic.o
 
-# Kernel entry point
-$CC $CFLAGS $LINK $INCL -MMD -MP -c src/kernel/cc-runtime.c -o obj/kernel/cc-runtime.o
-$CC $CFLAGS $LINK $INCL -MMD -MP -c src/kernel/kernel.c -o obj/kernel/kernel.o
-
 # SSFN Font
 ${OBJCPY} -O elf64-x86-64 -B i386:x86-64 -I binary unifont.sfn obj/unifont.o
 readelf -s --wide obj/unifont.o
 
 ${LD} \
-obj/i386/gdt.o \
-obj/i386/idt.o \
-obj/i386/irq.o \
-obj/i386/idt_handler.o \
-obj/i386/memory_functions.o \
-obj/i386/usermode.o \
-obj/i386/io.o \
-obj/i386/spinlock.o \
-obj/i386/cpuinfo.o \
+obj/arch/amd64/gdt.o \
+obj/arch/amd64/idt.o \
+obj/arch/amd64/irq.o \
+obj/arch/amd64/idt_handler.o \
+obj/arch/amd64/memory_functions.o \
+obj/arch/amd64/usermode.o \
+obj/arch/amd64/io.o \
+obj/arch/amd64/spinlock.o \
+obj/arch/amd64/cpuinfo.o \
 obj/drivers/acpi.o \
 obj/drivers/pci.o \
 obj/drivers/ahci.o \
 obj/drivers/rs232.o \
 obj/drivers/framebuffer.o \
 obj/drivers/ps2_keyboard.o \
-obj/drivers/ata_pio.o \
 obj/drivers/nvme.o \
 obj/drivers/xhci.o \
-obj/drivers/hda.o \
+obj/drivers/sound/hojuix_hda.o \
 obj/drivers/i386/rtc.o \
 obj/drivers/i386/pit_timer.o \
 obj/drivers/i386/intel_hrng.o \
@@ -115,6 +113,9 @@ obj/fs/guid_pt.o \
 obj/process/syscall.o \
 obj/process/elf.o \
 obj/misc/kpanic.o \
-obj/kernel/cc-runtime.o \
-obj/kernel/kernel.o \
+obj/kern/cc-runtime.o \
+obj/kern/kern_cdefs.o \
+obj/kern/kern_entry.o \
+obj/kern/kern_kprintf.o \
+obj/kern/extern_printf.o \
 $LINKFLAGS -o $KERNOBJ

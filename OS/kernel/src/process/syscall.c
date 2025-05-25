@@ -2,12 +2,12 @@
 #include <drivers/ps2_keyboard.h>
 #include <drivers/acpi.h>
 #include <kernel.h>
-#include <stdio.h>
+#include <kern/kprintf.h>
 
 #include <memory/vmmgr.h>
-#include <i386/asm_functions.h>
+#include <arch/amd64/asm_functions.h>
 #include <fs/fat16.h>
-#include <string.h>
+#include <kern/libkern.h>
 
 // C sysV ABI: RDI, RSI, RDX, RCX, R8, R9, then stack
 void syscall_handler(syscall_regs_t* r) {
@@ -55,6 +55,7 @@ void syscall_handler(syscall_regs_t* r) {
             break;
         case SYS_REBOOT:
             // SYS_REBOOT
+            syscall_reboot();
             break;
         case SYS_SHUTDOWN:
             // SYS_SHUTDOWN
@@ -116,5 +117,10 @@ void syscall_exec(char* rdi) {
     i386_memset(0x400000, 0x00, 32768);
     printf("PASSING %s\n", path);
     fat16_read_in_exec_file(path);
-    run_usermode();
+    //run_usermode();
+}
+
+void syscall_reboot() {
+    // Perform an ACPI reboot
+    acpi_reboot();
 }

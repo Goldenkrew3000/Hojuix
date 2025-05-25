@@ -5,13 +5,13 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <stdio.h>
-#include <string.h>
+#include <kern/kprintf.h>
+#include <kern/libkern.h>
 #include <kernel.h>
 #include <memory/pmmgr.h>
 #include <memory/vmmgr.h>
 #include <drivers/rs232.h>
-#include <i386/asm_functions.h>
+#include <arch/amd64/asm_functions.h>
 #include <misc/kpanic.h>
 #include <kernel_ext/limine.h>
 

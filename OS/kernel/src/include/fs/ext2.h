@@ -131,6 +131,14 @@ typedef struct { // The Second Extended File System Internal Layout - Page 18 (T
     uint8_t i_osd2[12];         // Operating System Specific Value 2
 } __attribute__((packed)) EXT2_InodeDataStructure_t;
 
+typedef struct { // The Second Extended File System Internal Layout - Page 26 (Table 4.1)
+    uint32_t inode;
+    uint16_t rec_len;
+    uint8_t name_len;
+    uint8_t file_type;
+    uint8_t name[255]; // HUH TODO CHECK OUT
+} __attribute__((packed)) EXT2_Directory_t;
+
 int ext2_init(uint64_t partition_offset);
 
 #endif

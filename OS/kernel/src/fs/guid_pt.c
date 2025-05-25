@@ -4,18 +4,18 @@
 // GPLv3
 */
 
-#include <stdio.h>
+#include <kern/kprintf.h>
 #include <fs/guid_pt.h>
 
 // Format: AABBCCDD-AABB-AABB-AABB-AABBCCDDEEFF
 //         28732ac1-1ff8-d211-ba4b-00a0c93ec93b
 
 //
-void guid_pt_parse(uintptr_t guid_pt_addr) {
+uint64_t guid_pt_parse(uintptr_t guid_pt_addr) {
     printf("[GUID_PT] Parsing GUID Partition Table...\n");
 
     GUID_t* guid_pt = (GUID_t*)guid_pt_addr;
-    printf("EFI: %s\n", guid_pt->part_tbl_hdr.signature);
+    //printf("EFI: %s\n", guid_pt->part_tbl_hdr.signature);
 
     for (size_t part = 0; part < 128; part++) {
         if (guid_pt->part_entries[part].part_type_guid[0] != 0x00) {
@@ -56,6 +56,10 @@ void guid_pt_parse(uintptr_t guid_pt_addr) {
             guid_pt->part_entries[part].part_guid[13],
             guid_pt->part_entries[part].part_guid[14],
             guid_pt->part_entries[part].part_guid[15]);
+
+            printf("Part %d Start: %lld End %lld\n", part, guid_pt->part_entries[part].lba_start, guid_pt->part_entries[part].lba_end);
         }
     }
+
+    return guid_pt->part_entries[1].lba_start;
 }

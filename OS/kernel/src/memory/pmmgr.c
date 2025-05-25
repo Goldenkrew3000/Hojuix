@@ -5,13 +5,12 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <kern/kprintf.h>
+#include <kern/libkern.h>
 #include <kernel.h>
 #include <memory/pmmgr.h>
 #include <memory/vmmgr.h>
-#include <i386/asm_functions.h>
+#include <arch/amd64/asm_functions.h>
 #include <kernel_ext/limine.h>
 
 // Limine Memory Map Variables

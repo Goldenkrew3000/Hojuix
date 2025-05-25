@@ -1,8 +1,8 @@
 #include <stdio.h>
 
 #if defined(__is_libk)
-#include <kernel/drivers/framebuffer.h>
-#include <kernel/drivers/rs232.h>
+#include <drivers/framebuffer.h>
+#include <drivers/rs232.h>
 #endif
 
 int putchar(int ic) {
