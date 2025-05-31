@@ -9,16 +9,16 @@
 #define SECTION_TBL_TYPE_NOTE       7
 
 typedef struct {
-    uint8_t magic[4];       // Should be 0x7F 'E' 'L' 'F'
-    uint8_t sub_arch;       // 32bit / 64bit
-    uint8_t endianness;     // Little / Big Endian
-    uint8_t elf_hdr_ver;    // As per the ELF specification, this MUST be 0x1
-    uint8_t abi;            // ELF ABI. 0x0 -> SysV ABI
+    uint8_t magic[4];                       // Should be 0x7F 'E' 'L' 'F'
+    uint8_t sub_arch;                       // 32bit / 64bit
+    uint8_t endianness;                     // Little / Big Endian
+    uint8_t elf_hdr_ver;                    // As per the ELF specification, this MUST be 0x1
+    uint8_t abi;                            // ELF ABI. 0x0 -> SysV ABI
     uint8_t padding1[8];
-    uint16_t type;          // Binary Type
-    uint16_t inst_set;      // Instruction set
-    uint32_t elf_ver;       // ELF version (NOT the ELF header version)
-    uint64_t program_entry_offset;                      // Program entry offset
+    uint16_t type;                          // Binary Type
+    uint16_t inst_set;                      // Instruction set
+    uint32_t elf_ver;                       // ELF version (NOT the ELF header version)
+    uint64_t program_entry_offset;          // Program entry offset
     uint64_t program_hdr_table_offset;
     uint64_t section_hdr_table_offset;
     uint32_t flags;
@@ -55,7 +55,7 @@ typedef struct {
 } elf_program_table_t; // ELF Program Table (56 bytes, 0x38, 64bit ONLY)
 
 void elf_prepare(uintptr_t addr);
-void elf_header_parse(uintptr_t addr);
+int elf_header_parse(uintptr_t addr);
 void elf_parse_section_header_table(uintptr_t elf_addr, uintptr_t section_table_addr);
 void elf_parse_program_header_table(uintptr_t addr);
 

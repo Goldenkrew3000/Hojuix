@@ -39,7 +39,7 @@ void elf_prepare(uintptr_t addr) {
     printf("done\n");
 }
 
-void elf_header_parse(uintptr_t addr) { // TODO - Add a struct table for checks
+int elf_header_parse(uintptr_t addr) { // TODO - Add a struct table for checks
     elf_header = (elf_header_t*)addr;
 
     // Verify ELF header
@@ -55,28 +55,35 @@ void elf_header_parse(uintptr_t addr) { // TODO - Add a struct table for checks
     // Check ELF sub architecture (32bit or 64bit)
     if (elf_header->sub_arch == 0x0) {
         printf("[ELF] Unknown sub-architecture.\n");
+        return -EINVAL;
     } else if (elf_header->sub_arch == 0x1) {
         printf("[ELF] 32-bit ELF executables are not supported.\n");
+        return -EINVAL;
     } else if (elf_header->sub_arch == 0x2) {
         // found
     } else {
         printf("[ELF] Unknown sub-architecture.\n");
+        return -EINVAL;
     }
 
     // Check ELF endianness
     if (elf_header->endianness == 0x0) {
         printf("[ELF] Unknown endianness.\n");
+        return -EINVAL;
     } else if (elf_header->endianness == 0x1) {
         // found
     } else if (elf_header->endianness == 0x2) {
         printf("[ELF] Big endian ELF executables are not supported.\n");
+        return -EINVAL;
     } else {
         printf("[ELF] Unknown endianness.\n");
+        return -EINVAL;
     }
 
     // Check ELF header version
     if (elf_header->elf_hdr_ver != 0x1) {
         printf("[ELF] ELF header version is incorrect.\n");
+        return -EINVAL;
     } else {
         // found
     }
@@ -84,6 +91,7 @@ void elf_header_parse(uintptr_t addr) { // TODO - Add a struct table for checks
     // Check ELF ABI for SysV compatibility
     if (elf_header->abi != 0x0) {
         printf("[ELF] ELF ABI does not match System-V.\n");
+        return -EINVAL;
     } else {
         //found
     }
@@ -91,26 +99,34 @@ void elf_header_parse(uintptr_t addr) { // TODO - Add a struct table for checks
     // Check ELF type
     if (elf_header->type == 0x0) {
         printf("[ELF] ELF has no type.\n");
+        return -EINVAL;
     } else if (elf_header->type == 0x1) {
         printf("[ELF] ELF type 'relocatable' is not supported.\n");
+        return -EINVAL;
     } else if (elf_header->type == 0x2) {
         // found executable
         printf("[ELF] Found ELF executable.\n");
     } else if (elf_header->type == 0x3) {
         printf("[ELF] ELF type 'shared' is not supported.\n");
+        return -EINVAL;
     } else if (elf_header->type == 0x4) {
         printf("[ELF] ELF type 'core' is not supported.\n");
+        return -EINVAL;
     } else {
         printf("[ELF] ELF has unknown type.\n");
+        return -EINVAL;
     }
 
     // Check ELF instruction set TODO FILL OUT
     if (elf_header->inst_set == 0x0) {
         printf("[ELF] ELF instruction set is unknown.\n");
+        return -EINVAL;
     } else if (elf_header->inst_set == 0x2) {
         printf("[ELF] ELF instruction set 'sparc' is not supported.\n");
+        return -EINVAL;
     } else if (elf_header->inst_set == 0x3) {
         printf("[ELF] ELF instruction set 'i386' is not supported.\n");
+        return -EINVAL;
     } else if (elf_header->inst_set == 0x3E) {
         // found
     }

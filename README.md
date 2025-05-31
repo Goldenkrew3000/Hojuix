@@ -39,7 +39,6 @@ There is code ported from other operating systems (most notably NetBSD) which re
 - 'Port' a shell (Probably XV6's SH)
 - VFS
 - (MAYBE) Port build system to CMake
-- Drop ATA PIO support
 
 # Funny list of things todo
 - Native linux kexec support in terminal (Treat a vmlinuz file as an executable)
