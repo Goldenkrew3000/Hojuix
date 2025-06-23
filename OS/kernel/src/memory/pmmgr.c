@@ -147,19 +147,32 @@ uintptr_t pmmgr_kmalloc(int size) {
     return ((uintptr_t)free_page) * 0x1000;
 }
 
+// Returns the physical address to a page of memory, which has been zeroed
+uintptr_t pmmgr_kcalloc(int size) {
+    uintptr_t phys_page_addr = pmmgr_kmalloc(size);
+    memset((void*)(phys_page_addr + BASE_MEM_OFFSET), 0x00, 0x1000); // TODO not taking into account size
+    return phys_page_addr;
+}
+
 // Returns the physical address to x pages of contiguous memory
 // size - Pages
 uintptr_t pmmgr_kmalloc_contiguous(int size) {
     uint64_t needed_pages = size;
     uint64_t free_page = pmmgr_find_free_pages(size);
 
-    //printf("Allocating free page\n");
-
     for (uint64_t i = 0; i < needed_pages; i++) {
         pmmgr_set_used(free_page + i);
     }
 
     return ((uintptr_t)free_page) * 0x1000;
+}
+
+// Returns the physical address to x pages of contiguous memory. which has been zeroed
+// size - Pages
+uintptr_t pmmgr_kcalloc_contiguous(int size) {
+    uintptr_t phys_page_addr = pmmgr_kmalloc_contiguous(size);
+    memset((void*)(phys_page_addr + BASE_MEM_OFFSET), 0x00, 0x1000 * size);
+    return phys_page_addr;
 }
 
 // Frees a page - TODO FIX REMOVE SIZE

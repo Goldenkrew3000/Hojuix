@@ -165,9 +165,10 @@ void kernel_entry(void) {
     uintptr_t nvme_bar_tbl_addr = pci_fetch_bar(nvme_idx);
     int rc = nvme_init(nvme_bar_tbl_addr);
 
+    kernel_finished();
+
     // Read the GUID Partition Table (LBA 0 - 33)
-    uintptr_t guid_pt_buf = pmmgr_kmalloc_contiguous(5) + 0xFFFF800000000000;
-    memset((uint8_t*)guid_pt_buf, 0x00, 4096 * 5);
+    uintptr_t guid_pt_buf = pmmgr_kcalloc_contiguous(5) + 0xFFFF800000000000;
     rc = nvme_read(guid_pt_buf, 0, 33);
     
     uint64_t hojuix_part_lba_offset = guid_pt_parse(guid_pt_buf); // Eventually make an easy searchable struct

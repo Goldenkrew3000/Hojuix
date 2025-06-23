@@ -26,6 +26,8 @@ struct nvme_queue admin_queue;
 struct nvme_queue ns_queue;
 uintptr_t ns1_io_queue_regpgs = 0;
 
+uintptr_t glob_test = 0;
+
 int nvme_init(uintptr_t bar_tbl_addr) {
     // Get the PCI BAR Table
     pci_device_bar_table_t* pci_bar_table = (pci_device_bar_table_t*)bar_tbl_addr;
@@ -82,6 +84,7 @@ int nvme_init(uintptr_t bar_tbl_addr) {
     uintptr_t admin_completion_addr = pmmgr_kmalloc_contiguous(4) + 0xFFFF800000000000; // TODO Not sure of the size
     memset((uint8_t*)admin_submit_addr, 0x00, 4096 * 4); // TODO Not sure of the size
     memset((uint8_t*)admin_completion_addr, 0x00, 4096 * 4); // TODO Not sure of the size
+    glob_test = admin_completion_addr;
     admin_queue.submit = (struct nvme_cmd*)admin_submit_addr;
     admin_queue.submit_db = (nvme_base_addr + PAGE_SIZE + (2 * admin_queue_id * (4 << stride)));
     admin_queue.sq_head = 0;
@@ -155,6 +158,7 @@ int nvme_init(uintptr_t bar_tbl_addr) {
     }
 
     uint8_t* identify_cns2_ptr = (uint8_t*)(identify_cns2_buffer + 0xFFFF800000000000);
+    printf("%x %x %x %x %x\n", identify_cns2_ptr[0], identify_cns2_ptr[1], identify_cns2_ptr[2], identify_cns2_ptr[3], identify_cns2_ptr[4]);
     bool foundNamespace1 = false;
     for (size_t i = 0; i < identify_ns0->nn; i++) {
         if (identify_cns2_ptr[i]) {
@@ -285,6 +289,12 @@ int nvme_submit_wait_cmd(struct nvme_queue* queue, struct nvme_cmd cmd) {
             return -EIO;
         }
     }
+    /*while (true) {
+        status = queue->completion[queue->cq_head].status;
+        if ((status && 0x01) == phase) {
+            break;
+        }
+    }*/
 
     head++;
     if (head == queue->elements) {
@@ -374,6 +384,44 @@ int nvme_read(uintptr_t buffer, uint32_t start_lba, uint32_t lba_count) {
     
     return EXIT_SUCCESS;
     // TODO Return code
+}
+
+void nvme_read_smart() {
+    uintptr_t buf = pmmgr_kcalloc(1);
+    struct nvme_cmd smart_cmd = {0};
+    smart_cmd.log.opcode = 0x02; // Admin Log Page Opcode
+    smart_cmd.log.nsid = 0xFFFFFFFF; // Standard for SMART
+    smart_cmd.log.prp1 = (uint64_t)buf;
+    smart_cmd.log.cdw10 = (0x02) | ((127) << 16);
+    smart_cmd.log.cdw12 = 0;
+    rc = nvme_submit_wait_cmd(&admin_queue, smart_cmd);
+    if (rc != 0) {
+        printf("[NVMe] Fatal error received on SMART data cmd.\n");
+        return;
+    }
+
+    nvme_admin_smart_log_page_t* smart_log = (nvme_admin_smart_log_page_t*)(buf + 0xFFFF800000000000);
+    // TODO figure out why there are extra zeros here...
+    printf("CW: %d\n", smart_log->cw);
+    printf("CTEMP (Kv): %d\n", smart_log->ctemp);
+    printf("AVSP: %d\n", smart_log->avsp);
+    printf("AVSPT: %d\n", smart_log->avspt);
+    printf("PUSED: %d%%\n", smart_log->pused);
+    printf("EGCWS: %d\n", smart_log->egcws);
+    printf("DUR: %.16llx%.16llx\n", smart_log->dur_hi, smart_log->dur_lo);
+    printf("DUW: %.16llx%.16llx\n", smart_log->duw_hi, smart_log->duw_lo);
+    printf("HRC: %.16llx%.16llx\n", smart_log->hrc_hi, smart_log->hrc_lo);
+    printf("HWC: %.16llx%.16llx\n", smart_log->hwc_hi, smart_log->hwc_lo);
+    printf("CBT: %.16llx%.16llx\n", smart_log->cbt_hi, smart_log->cbt_lo);
+    printf("PWRC: %.16llx%.16llx\n", smart_log->pwrc_hi, smart_log->pwrc_lo);
+    printf("POH: %.16llx%.16llx\n", smart_log->poh_hi, smart_log->poh_lo);
+    printf("UPL: %.16llx%.16llx\n", smart_log->upl_hi, smart_log->upl_lo);
+    printf("MDIE: %.16llx%.16llx\n", smart_log->mdie_hi, smart_log->mdie_lo);
+    printf("NEILE: %.16llx%.16llx\n", smart_log->neile_hi, smart_log->neile_lo);
+    printf("WCTT: %ld\n", smart_log->wctt);
+    printf("CCTT: %ld\n", smart_log->cctt);
+    printf("TSEN1: %ld\n", smart_log->tsen1);
+    printf("TSEN2: %ld\n", smart_log->tsen2);
 }
 
 /*

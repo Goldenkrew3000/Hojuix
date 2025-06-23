@@ -105,6 +105,22 @@ struct nvme_cmd {
             uint16_t cqid;
             uint32_t unused2[5];
         } abort;
+        struct {
+            uint8_t opcode;
+            uint8_t flags;
+            uint16_t cid;
+            uint32_t nsid;
+            uint32_t cdw1[2];
+            uint64_t metadata;
+            uint64_t prp1;
+            uint64_t prp2;
+            uint32_t cdw10;
+            uint32_t cdw11;
+            uint32_t cdw12;
+            uint32_t cdw13;
+            uint32_t cdw14;
+            uint32_t cdw15;
+        } log; // Technically a common one, sourced mostly from the Linux kernel
     };
 };
 
@@ -200,6 +216,48 @@ typedef struct { // NVM Express NVM Command Set Specification Rev 1.1 Page 80 (F
     struct nvme_lbaf lbaf[16];
 } __attribute__((packed)) nvme_identify_nsx_cns0_t; // NVMe Identify NSx CNS 0
 
+
+
+
+
+// NVMe Admin Log, NSID 0xFFFFFFFF (SMART / Health Information Log Page)
+typedef struct { // NVM Express Base Specification Rev 2.1 Page 209 (Figure 206), supplimented with smartmontools source
+    uint8_t cw;         // Critical Warning
+    uint16_t ctemp;     // Composite Temperature
+    uint8_t avsp;       // Available Spare
+    uint8_t avspt;      // Available Spare Threshold
+    uint8_t pused;      // Percentage Used
+    uint8_t egcws;      // Endurance Group Critical Warning Summary
+    uint8_t rsvd1[24];
+    uint64_t dur_lo;    // Data Units Read
+    uint64_t dur_hi;
+    uint64_t duw_lo;    // Data Units Written
+    uint64_t duw_hi;
+    uint64_t hrc_lo;    // Host Read Commands
+    uint64_t hrc_hi;
+    uint64_t hwc_lo;    // Host Write Commands
+    uint64_t hwc_hi;
+    uint64_t cbt_lo;    // Controller Busy Time
+    uint64_t cbt_hi;
+    uint64_t pwrc_lo;   // Power Cycles
+    uint64_t pwrc_hi;
+    uint64_t poh_lo;    // Power On Hours
+    uint64_t poh_hi;
+    uint64_t upl_lo;    // Unexpected Power Losses (Unsafe Shutdowns)
+    uint64_t upl_hi;
+    uint64_t mdie_lo;   // Media and Data Integrity Errors
+    uint64_t mdie_hi;
+    uint64_t neile_lo;  // Number of Error Informaton Log Entries
+    uint64_t neile_hi;
+    uint32_t wctt;      // Warning Composite Temperature Time
+    uint32_t cctt;      // Critical Composite Temperature Time
+    uint16_t tsen1;     // Temperature Sensor 1
+    uint16_t tsen2;     // Temperature Sensor 2
+} __attribute__((packed)) nvme_admin_smart_log_page_t;
+
+
+
+
 // NVME -
 #define CAP_MAX_ENTRIES(cap) ((cap) & 0xffff)
 #define CAP_DOORBELL_STRIDE(cap) (((cap) >> 32) & 0xf)
@@ -243,6 +301,8 @@ int nvme_init(uintptr_t bar_tbl_addr);
 void nvme_wait_completion(uint16_t expected_cid);
 void nvme_submit_cmd(struct nvme_queue* queue, struct nvme_cmd cmd);
 int nvme_submit_wait_cmd(struct nvme_queue* queue, struct nvme_cmd cmd);
+void nvme_read_smart();
+
 
 
 int nvme_read(uintptr_t buffer, uint32_t start_lba, uint32_t lba_count);
