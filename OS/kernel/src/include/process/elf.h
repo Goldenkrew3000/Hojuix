@@ -59,6 +59,4 @@ int elf_header_parse(uintptr_t addr);
 void elf_parse_section_header_table(uintptr_t elf_addr, uintptr_t section_table_addr);
 void elf_parse_program_header_table(uintptr_t addr);
 
-int test_strcmp(const char *s1, const char *s2);
-
 #endif

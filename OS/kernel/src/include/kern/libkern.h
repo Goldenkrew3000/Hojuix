@@ -15,4 +15,7 @@ void* kern_memset(void *, int, size_t);
 size_t kern_strlen(const char *);
 #define	strlen(a) kern_strlen(a)
 
+int kern_strcmp(const char* s1, const char* s2);
+#define strcmp(a, b) kern_strcmp(a, b)
+
 #endif

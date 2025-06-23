@@ -2,7 +2,7 @@
 #include <misc/kpanic.h>
 
 __attribute__((__noreturn__))
-void kpanic(void) {
-    printf("[KERNEL] Kernel Panic (abort)!\n");
+void kpanic(const char* s) {
+    printf("[KERNEL] Kernel Panic: %s", s);
     asm volatile("cli; hlt;");
 }

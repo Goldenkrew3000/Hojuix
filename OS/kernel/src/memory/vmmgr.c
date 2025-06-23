@@ -209,8 +209,7 @@ void vmmgr_map_pages(uint64_t pml4_addr[], uint64_t virt_addr, uint64_t phys_add
         }
         pml3 = 0;
     }
-    printf("[VMMGR] %s: Could not map more virtual memory.\n", __func__);
-    kpanic();
+    kpanic("Could not map virtual memory.\n");
 }
 
 void vmmgr_unmap_pages(uint64_t *pml4_addr, uint64_t virt_addr, uint64_t num_pages) {
@@ -311,8 +310,7 @@ void vmmgr_alloc_pages(uint64_t pml4_addr[], uint64_t virt_addr, uint64_t num_pa
         }
         pml3 = 0;
     }
-    printf("[VMMGR] %s: Could not map more virtual memory.\n", __func__);
-    kpanic();
+    kpanic("Could not map more virtual memory.\n");
 }
 
 void vmmgr_map_sections(uint64_t pml4[]) {

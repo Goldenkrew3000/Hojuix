@@ -33,6 +33,7 @@
 #include <arch/amd64/cpuinfo.h>
 #include <arch/amd64/asm_functions.h>
 #include <arch/amd64/io.h>
+#include <misc/kpanic.h>
 #include <kernel_ext/limine.h>
 
 // Set the limine base revision to 2 (Latest)
@@ -97,7 +98,6 @@ void kernel_entry(void) {
     }
 
     // Fetch HHDM offset, Memory map, and Kernel address to configure memory management
-    //rs232_writeline(1, "[LIMINE] Fetching HHDM Offset, Memory map, and Kernel address.\r\n");
     kerndata.hhdm_offset = (hhdm_request.response)->offset;
     kerndata.memmap = *memmap_request.response;
     kerndata.kernel_addr = *(kernel_address_request.response);
@@ -112,17 +112,14 @@ void kernel_entry(void) {
     // Ensure we have got a framebuffer
     if (framebuffer_request.response == NULL || framebuffer_request.response->framebuffer_count < 1) {
         // Could not fetch a framebuffer from limine
-        rs232_writeline(1, "[LIMINE] Could not find a framebuffer, halting.\r\n");
         asm volatile("hlt");
-    } else {
-        rs232_writeline(1, "[LIMINE] Found a framebuffer.\r\n");
     }
 
     // Fetch the first framebuffer
     struct limine_framebuffer *framebuffer = NULL;
     framebuffer = framebuffer_request.response->framebuffers[0];
 
-    // Init framebuffer
+    // Initialize SSFN for the framebuffer
     framebuffer_ssfn_init(framebuffer);
     framebuffer_fill_background(0x000000);
 
@@ -155,16 +152,15 @@ void kernel_entry(void) {
     ps2_keyboard_init();
 
     // Initialize ACPI
-    acpi_init(); // REQUIRED for userspace reboot command
+    acpi_init(); // REQUIRED for userspace reboot
     
     // Initialize PCI
     uintptr_t pci_device_tbl_addr = pci_init();
 
     // Initialize NVMe
-    int nvme_idx = pci_find_nvme_device(); // Search for an XHCI controller
+    int nvme_idx = pci_find_nvme_device();
     if (nvme_idx == -ENOENT) {
-        printf("[KERNEL] Could not find NVMe on the PCI bus.\n");
-        kernel_finished(); // TODO KPanic here
+        kpanic("Could not find an NVMe device on the PCI bus.\n");
     }
     uintptr_t nvme_bar_tbl_addr = pci_fetch_bar(nvme_idx);
     int rc = nvme_init(nvme_bar_tbl_addr);

@@ -1,7 +1,7 @@
 # BSD/Hojuix build script
 
 # Use GCC 15.1.0 x86_64-elf cross compiler
-export PATH="/home/user/Developer/Hojuix/CrossCompiler/x86_64-output/bin:$PATH"
+export PATH="/home/user/Programming/Hojuix/Crosscompilers/out-x86_64-elf/bin:$PATH"
 CC="x86_64-elf-gcc"
 LD="x86_64-elf-ld"
 OBJCPY="x86_64-elf-objcopy"

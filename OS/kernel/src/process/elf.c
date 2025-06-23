@@ -2,7 +2,7 @@
 // ELF Parser v1.0
 // Hojuix 2025-04-20
 // ELF Specification: http://www.skyfree.org/linux/references/ELF_Format.pdf
-// NOTE: Does not follow the ELF Specification naming convention, (maybe) fix later.
+// NOTE: Does not follow the ELF Specification naming convention, fix later.
 */
 
 #include <stdint.h>
@@ -10,6 +10,7 @@
 #include <process/elf.h>
 #include <memory/vmmgr.h>
 #include <arch/amd64/asm_functions.h>
+#include <kern/libkern.h>
 
 uintptr_t program_header_addr;
 uintptr_t section_header_addr;
@@ -39,7 +40,7 @@ void elf_prepare(uintptr_t addr) {
     printf("done\n");
 }
 
-int elf_header_parse(uintptr_t addr) { // TODO - Add a struct table for checks
+int elf_header_parse(uintptr_t addr) {
     elf_header = (elf_header_t*)addr;
 
     // Verify ELF header
@@ -48,8 +49,7 @@ int elf_header_parse(uintptr_t addr) { // TODO - Add a struct table for checks
         elf_header->magic[2] != 0x4C &&
         elf_header->magic[3] != 0x46) {
             printf("[ELF] File is not an ELF file.\n");
-    } else {
-        // found
+            return -EINVAL;
     }
 
     // Check ELF sub architecture (32bit or 64bit)
@@ -60,7 +60,7 @@ int elf_header_parse(uintptr_t addr) { // TODO - Add a struct table for checks
         printf("[ELF] 32-bit ELF executables are not supported.\n");
         return -EINVAL;
     } else if (elf_header->sub_arch == 0x2) {
-        // found
+        // ELF file is 64-bit, continue
     } else {
         printf("[ELF] Unknown sub-architecture.\n");
         return -EINVAL;
@@ -71,7 +71,7 @@ int elf_header_parse(uintptr_t addr) { // TODO - Add a struct table for checks
         printf("[ELF] Unknown endianness.\n");
         return -EINVAL;
     } else if (elf_header->endianness == 0x1) {
-        // found
+        // ELF file is little endian, continue
     } else if (elf_header->endianness == 0x2) {
         printf("[ELF] Big endian ELF executables are not supported.\n");
         return -EINVAL;
@@ -84,16 +84,12 @@ int elf_header_parse(uintptr_t addr) { // TODO - Add a struct table for checks
     if (elf_header->elf_hdr_ver != 0x1) {
         printf("[ELF] ELF header version is incorrect.\n");
         return -EINVAL;
-    } else {
-        // found
     }
 
     // Check ELF ABI for SysV compatibility
     if (elf_header->abi != 0x0) {
         printf("[ELF] ELF ABI does not match System-V.\n");
         return -EINVAL;
-    } else {
-        //found
     }
 
     // Check ELF type
@@ -104,8 +100,7 @@ int elf_header_parse(uintptr_t addr) { // TODO - Add a struct table for checks
         printf("[ELF] ELF type 'relocatable' is not supported.\n");
         return -EINVAL;
     } else if (elf_header->type == 0x2) {
-        // found executable
-        printf("[ELF] Found ELF executable.\n");
+        // Found ELF executable, continue
     } else if (elf_header->type == 0x3) {
         printf("[ELF] ELF type 'shared' is not supported.\n");
         return -EINVAL;
@@ -117,7 +112,7 @@ int elf_header_parse(uintptr_t addr) { // TODO - Add a struct table for checks
         return -EINVAL;
     }
 
-    // Check ELF instruction set TODO FILL OUT
+    // Check ELF instruction set. Yes most of these are not needed, but I filled it out for completeness
     if (elf_header->inst_set == 0x0) {
         printf("[ELF] ELF instruction set is unknown.\n");
         return -EINVAL;
@@ -127,8 +122,31 @@ int elf_header_parse(uintptr_t addr) { // TODO - Add a struct table for checks
     } else if (elf_header->inst_set == 0x3) {
         printf("[ELF] ELF instruction set 'i386' is not supported.\n");
         return -EINVAL;
+    } else if (elf_header->inst_set == 0x08) {
+        printf("[ELF] ELF instruction set 'mips' is not suppored.\n");
+        return -EINVAL;
+    } else if (elf_header->inst_set == 0x14) {
+        printf("[ELF] ELF instruction set 'powerpc' is not suppored.\n");
+        return -EINVAL;
+    } else if (elf_header->inst_set == 0x28) {
+        printf("[ELF] ELF instruction set 'arm' is not supported.\n");
+        return -EINVAL;
+    } else if (elf_header->inst_set == 0x2A) {
+        printf("[ELF] ELF instruction set 'superh' is not supported.\n");
+        return -EINVAL;
+    } else if (elf_header->inst_set == 0x32) {
+        printf("[ELF] ELF instruction set 'ia32' is not supported.\n");
+        return -EINVAL;
     } else if (elf_header->inst_set == 0x3E) {
-        // found
+        // Found x86_64 ELF file, continue
+    } else if (elf_header->inst_set == 0xB7) {
+        // NOTE Will be supported in the future
+        printf("[ELF] ELF instruction set 'aarch64' is not supported.\n");
+        return -EINVAL;
+    } else if (elf_header->inst_set == 0xF3) {
+        // NOTE Will _probably_ be supported in the future
+        printf("[ELF] ELF instruction set 'riscv' is not supported.\n");
+        return -EINVAL;
     }
 
     // Check ELF version
@@ -152,10 +170,10 @@ void elf_parse_section_header_table(uintptr_t elf_addr, uintptr_t section_table_
 
         // Check the name of the section against the offset in the shstrtab table (Is null terminated)
         uintptr_t shstrtab_section_name = elf_addr + section_shstrtab_table->section_data_offset + elf_section_table->section_name;
-        if (test_strcmp((uint8_t*)shstrtab_section_name, ".text") == 0) {
+        if (strcmp((uint8_t*)shstrtab_section_name, ".text") == 0) {
             printf("[ELF] Found .text section.\n");
             elf_text_section = (elf_section_table_t*)(section_table_addr + (0x40 * i));
-        } else if (test_strcmp((uint8_t*)shstrtab_section_name, ".rodata") == 0) {
+        } else if (strcmp((uint8_t*)shstrtab_section_name, ".rodata") == 0) {
             printf("[ELF] Found .rodata section.\n");
             elf_rodata_section = (elf_section_table_t*)(section_table_addr + (0x40 * i));
         }
@@ -170,21 +188,4 @@ void elf_parse_program_header_table(uintptr_t addr) {
         elf_program_table_t* elf_program_table = (elf_program_table_t*)(addr + (0x38 * i));
         printf("Segment type: %lx\n", elf_program_table->segment_type);
     }
-}
-
-
-int test_strcmp(const char *s1, const char *s2)
-{
-    while (*s1 == *s2)
-    {
-        if (*s1 == '\0')
-        {
-            return 0;
-        }
-
-        ++s1;
-        ++s2;
-    }
-
-    return *s1 - *s2;
 }
