@@ -113,9 +113,10 @@ isr_stub_14:
 
 .global isr_stub_other
 isr_stub_other:
-    push $0  // Dummy error code
-    push $15  // Interrupt number
-    jmp common_interrupt_handler
+    //push $0  // Dummy error code
+    //push $15  // Interrupt number
+    //jmp common_interrupt_handler
+    ret
 
 .global isr_stub_syscall
 isr_stub_syscall:
@@ -145,9 +146,9 @@ isr_stub_table:
     .quad isr_stub_other
     .endr
     .quad isr_stub_syscall # 0x80 SYSCALL
-    .rept 127
-    .quad isr_stub_other
-    .endr
+    //.rept 127
+    //.quad isr_stub_other
+    //.endr
 
 
 .global common_interrupt_handler

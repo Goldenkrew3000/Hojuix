@@ -57,3 +57,14 @@ int kern_strcmp(const char* s1, const char* s2) {
     }
     return *(const unsigned char*)s1 - *(const unsigned char*)(s2 - 1);
 }
+
+// No idea where this is from, and it is 100% NOT C standard compliant
+int kern_strncmp(const char *s1, const char *s2, size_t n)
+{
+    for (size_t i = 0; i < n; i++) {
+        if (s1[i] != s2[i]) {
+            return 1;
+        }
+    }
+    return 0;
+}

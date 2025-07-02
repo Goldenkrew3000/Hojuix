@@ -1,7 +1,7 @@
 # BSD/Hojuix build script
 
 # Use GCC 15.1.0 x86_64-elf cross compiler
-export PATH="/home/user/Programming/Hojuix/Crosscompilers/out-x86_64-elf/bin:$PATH"
+export PATH="/home/user/Programming/CrossCompilers/x86_64-elf/bin:$PATH"
 CC="x86_64-elf-gcc"
 LD="x86_64-elf-ld"
 OBJCPY="x86_64-elf-objcopy"
@@ -9,8 +9,8 @@ OBJCPY="x86_64-elf-objcopy"
 # Kernel Object
 KERNOBJ="vmbsd"
 
-CFLAGS="-g -pipe -Wall -Wextra -std=gnu11 -nostdinc -ffreestanding -fno-stack-protector -fno-stack-check -fno-lto -fno-PIC -ffunction-sections -fdata-sections -m64 -march=x86-64 -mno-80387 -mno-mmx -mno-sse -mno-sse2 -mno-red-zone -mcmodel=kernel -isystem freestanding-headers"
-INCL="-I ../common -I src/include"
+CFLAGS="-DUACPI_BAREBONES_MODE=1 -g -pipe -Wall -Wextra -std=gnu11 -nostdinc -ffreestanding -fno-stack-protector -fno-stack-check -fno-lto -fno-PIC -ffunction-sections -fdata-sections -m64 -march=x86-64 -mno-80387 -mno-mmx -mno-sse -mno-sse2 -mno-red-zone -mcmodel=kernel -isystem freestanding-headers"
+INCL="-I ../common -I src/include -I src/extern/uacpi/include"
 
 LINKFLAGS="-m elf_x86_64 -nostdlib -static -z max-page-size=0x1000 -gc-sections -T linker-x86_64.ld obj/unifont.o"
 
@@ -26,6 +26,29 @@ mkdir obj/drivers/i386
 mkdir obj/fs
 mkdir obj/process
 mkdir obj/misc
+mkdir obj/extern
+mkdir obj/extern/uacpi
+
+# /extern/uacpi
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/extern/uacpi/source/tables.c -o obj/extern/uacpi/tables.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/extern/uacpi/source/types.c -o obj/extern/uacpi/types.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/extern/uacpi/source/uacpi.c -o obj/extern/uacpi/uacpi.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/extern/uacpi/source/utilities.c -o obj/extern/uacpi/utilities.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/extern/uacpi/source/interpreter.c -o obj/extern/uacpi/interpreter.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/extern/uacpi/source/opcodes.c -o obj/extern/uacpi/opcodes.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/extern/uacpi/source/namespace.c -o obj/extern/uacpi/namespace.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/extern/uacpi/source/stdlib.c -o obj/extern/uacpi/stdlib.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/extern/uacpi/source/shareable.c -o obj/extern/uacpi/shareable.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/extern/uacpi/source/opregion.c -o obj/extern/uacpi/opregion.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/extern/uacpi/source/default_handlers.c -o obj/extern/uacpi/default_handlers.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/extern/uacpi/source/io.c -o obj/extern/uacpi/io.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/extern/uacpi/source/notify.c -o obj/extern/uacpi/notify.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/extern/uacpi/source/sleep.c -o obj/extern/uacpi/sleep.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/extern/uacpi/source/registers.c -o obj/extern/uacpi/registers.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/extern/uacpi/source/resources.c -o obj/extern/uacpi/resources.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/extern/uacpi/source/event.c -o obj/extern/uacpi/event.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/extern/uacpi/source/mutex.c -o obj/extern/uacpi/mutex.o
+$CC $CFLAGS $LINK $INCL -MMD -MP -c src/extern/uacpi/source/osi.c -o obj/extern/uacpi/osi.o
 
 # /kern
 $CC $CFLAGS $LINK $INCL -MMD -MP -c src/kern/cc-runtime.c -o obj/kern/cc-runtime.o
@@ -118,4 +141,23 @@ obj/kern/kern_cdefs.o \
 obj/kern/kern_entry.o \
 obj/kern/kern_kprintf.o \
 obj/kern/extern_printf.o \
+obj/extern/uacpi/tables.o \
+obj/extern/uacpi/types.o \
+obj/extern/uacpi/uacpi.o \
+obj/extern/uacpi/utilities.o \
+obj/extern/uacpi/interpreter.o \
+obj/extern/uacpi/opcodes.o \
+obj/extern/uacpi/namespace.o \
+obj/extern/uacpi/stdlib.o \
+obj/extern/uacpi/shareable.o \
+obj/extern/uacpi/opregion.o \
+obj/extern/uacpi/default_handlers.o \
+obj/extern/uacpi/io.o \
+obj/extern/uacpi/notify.o \
+obj/extern/uacpi/sleep.o \
+obj/extern/uacpi/registers.o \
+obj/extern/uacpi/resources.o \
+obj/extern/uacpi/event.o \
+obj/extern/uacpi/mutex.o \
+obj/extern/uacpi/osi.o \
 $LINKFLAGS -o $KERNOBJ

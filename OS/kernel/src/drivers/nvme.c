@@ -80,10 +80,10 @@ int nvme_init(uintptr_t bar_tbl_addr) {
 
     // Create admin queue
     int admin_queue_id = 0; // First queue is the admin queue
-    uintptr_t admin_submit_addr = pmmgr_kmalloc_contiguous(4) + 0xFFFF800000000000; // TODO Not sure of the size
-    uintptr_t admin_completion_addr = pmmgr_kmalloc_contiguous(4) + 0xFFFF800000000000; // TODO Not sure of the size
-    memset((uint8_t*)admin_submit_addr, 0x00, 4096 * 4); // TODO Not sure of the size
-    memset((uint8_t*)admin_completion_addr, 0x00, 4096 * 4); // TODO Not sure of the size
+    uintptr_t admin_submit_addr = pmmgr_kmalloc_contiguous(32) + 0xFFFF800000000000; // TODO Not sure of the size
+    uintptr_t admin_completion_addr = pmmgr_kmalloc_contiguous(32) + 0xFFFF800000000000; // TODO Not sure of the size
+    memset((uint8_t*)admin_submit_addr, 0x00, 4096 * 32); // TODO Not sure of the size
+    memset((uint8_t*)admin_completion_addr, 0x00, 4096 * 32); // TODO Not sure of the size
     glob_test = admin_completion_addr;
     admin_queue.submit = (struct nvme_cmd*)admin_submit_addr;
     admin_queue.submit_db = (nvme_base_addr + PAGE_SIZE + (2 * admin_queue_id * (4 << stride)));
@@ -209,12 +209,12 @@ int nvme_init(uintptr_t bar_tbl_addr) {
 
     // Create and assign IO SQ/CQ Queues to Namespace 1
     int queue_id = 1; // Namespace ID
-    uintptr_t ns1_io_queue_submit_addr = pmmgr_kmalloc_contiguous(16) + 0xFFFF800000000000; // TODO Not sure of the size
-    uintptr_t ns1_io_queue_completion_addr = pmmgr_kmalloc_contiguous(16) + 0xFFFF800000000000; // TODO Not sure of the size
-    ns1_io_queue_regpgs = pmmgr_kmalloc_contiguous(16); // not sure
-    i386_memset((uint8_t*)ns1_io_queue_submit_addr, 0x00, 4096 * 16); // TODO Not sure of the size
-    i386_memset((uint8_t*)ns1_io_queue_completion_addr, 0x00, 4096 * 16); // TODO Not sure of the size
-    i386_memset((uint8_t*)(ns1_io_queue_regpgs + 0xFFFF800000000000), 0x00, 4096 * 16); // not sure
+    uintptr_t ns1_io_queue_submit_addr = pmmgr_kmalloc_contiguous(32) + 0xFFFF800000000000; // TODO Not sure of the size
+    uintptr_t ns1_io_queue_completion_addr = pmmgr_kmalloc_contiguous(32) + 0xFFFF800000000000; // TODO Not sure of the size
+    ns1_io_queue_regpgs = pmmgr_kmalloc_contiguous(32); // not sure
+    i386_memset((uint8_t*)ns1_io_queue_submit_addr, 0x00, 4096 * 32); // TODO Not sure of the size
+    i386_memset((uint8_t*)ns1_io_queue_completion_addr, 0x00, 4096 * 32); // TODO Not sure of the size
+    i386_memset((uint8_t*)(ns1_io_queue_regpgs + 0xFFFF800000000000), 0x00, 4096 * 32); // not sure
     ns_queue.submit = (struct nvme_cmd*)ns1_io_queue_submit_addr;
 	ns_queue.submit_db = (nvme_base_addr + PAGE_SIZE + (2 * queue_id * (4 << stride)));
 	ns_queue.sq_head = 0;

@@ -152,7 +152,7 @@ void kernel_entry(void) {
     ps2_keyboard_init();
 
     // Initialize ACPI
-    acpi_init(); // REQUIRED for userspace reboot
+    //acpi_init(); // REQUIRED for userspace reboot
     
     // Initialize PCI
     uintptr_t pci_device_tbl_addr = pci_init();
@@ -165,13 +165,15 @@ void kernel_entry(void) {
     uintptr_t nvme_bar_tbl_addr = pci_fetch_bar(nvme_idx);
     int rc = nvme_init(nvme_bar_tbl_addr);
 
-    kernel_finished();
+    
 
     // Read the GUID Partition Table (LBA 0 - 33)
     uintptr_t guid_pt_buf = pmmgr_kcalloc_contiguous(5) + 0xFFFF800000000000;
     rc = nvme_read(guid_pt_buf, 0, 33);
-    
     uint64_t hojuix_part_lba_offset = guid_pt_parse(guid_pt_buf); // Eventually make an easy searchable struct
+    
+    //fat32_init(hojuix_part_lba_offset);
+    ext2_init(hojuix_part_lba_offset);
     //uint64_t hojuix_part_lba_offset = 0;
     //ext2_init(hojuix_part_lba_offset);
     
@@ -179,6 +181,7 @@ void kernel_entry(void) {
     //uintptr_t elf_file = fat16_fs_test(hojuix_part_lba_offset);
     //vmmgr_map_usermode();
     //run_usermode(elf_file);
+    kernel_finished();
 
     int hda_idx = pci_find_hda_device(); // Search for an XHCI controller
     if (hda_idx == -ENOENT) {

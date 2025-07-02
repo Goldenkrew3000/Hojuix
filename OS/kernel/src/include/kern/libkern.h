@@ -18,4 +18,7 @@ size_t kern_strlen(const char *);
 int kern_strcmp(const char* s1, const char* s2);
 #define strcmp(a, b) kern_strcmp(a, b)
 
+int kern_strncmp(const char *s1, const char *s2, size_t n);
+#define strncmp(a, b, c) kern_strncmp(a, b, c)
+
 #endif

@@ -139,6 +139,10 @@ uint64_t pmmgr_find_free_pages(uint64_t size) {
     // TODO abort here
 }
 
+
+/*
+// TODO Remove the size requirement, as it is not used and only here to not break internal kernel API
+*/
 // Returns the physical address to a page of memory
 uintptr_t pmmgr_kmalloc(int size) {
     uint64_t free_page = pmmgr_find_free_pages(1);
@@ -150,9 +154,19 @@ uintptr_t pmmgr_kmalloc(int size) {
 // Returns the physical address to a page of memory, which has been zeroed
 uintptr_t pmmgr_kcalloc(int size) {
     uintptr_t phys_page_addr = pmmgr_kmalloc(size);
-    memset((void*)(phys_page_addr + BASE_MEM_OFFSET), 0x00, 0x1000); // TODO not taking into account size
+    memset((void*)(phys_page_addr + BASE_MEM_OFFSET), 0x00, PAGE_SIZE);
     return phys_page_addr;
 }
+
+// Returns the virtual address to a page of memory, which has been zeroed
+uintptr_t pmmgr_kcalloc_virtual() {
+    uintptr_t phys_page_addr = pmmgr_kcalloc(0);
+    return (phys_page_addr + BASE_MEM_OFFSET);
+}
+
+
+
+
 
 // Returns the physical address to x pages of contiguous memory
 // size - Pages
@@ -178,11 +192,11 @@ uintptr_t pmmgr_kcalloc_contiguous(int size) {
 // Frees a page - TODO FIX REMOVE SIZE
 void pmmgr_kfree(uintptr_t physical_addr, uint64_t size) {
     uint64_t page = physical_addr / 0x1000;
-    uint64_t pages = (size + 0x1000 - 1) / 0x1000;
+    //uint64_t pages = (size + 0x1000 - 1) / 0x1000;
 
-    for (uint64_t i = 0; i < pages; i++) {
-        pmmgr_set_free(page + i);
-    }
+    //for (uint64_t i = 0; i < pages; i++) {
+        pmmgr_set_free(page);// + i);
+    //}
 }
 
 void pmmgr_print_bitmap() {

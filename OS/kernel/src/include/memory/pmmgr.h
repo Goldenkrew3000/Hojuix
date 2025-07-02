@@ -8,6 +8,7 @@ uint8_t pmmgr_is_page_used(uint64_t page);
 uint64_t pmmgr_find_free_pages(uint64_t size);
 uintptr_t pmmgr_kmalloc(int size);
 uintptr_t pmmgr_kcalloc(int size);
+uintptr_t pmmgr_kcalloc_virtual();
 uintptr_t pmmgr_kmalloc_contiguous(int size);
 uintptr_t pmmgr_kcalloc_contiguous(int size);
 void pmmgr_kfree(uintptr_t physical_addr, uint64_t size);
